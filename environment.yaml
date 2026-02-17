@@ -1,0 +1,14 @@
+name: bc-project
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+    - chainlit
+    - langgraph
+    - langchain
+    - langchain-google-genai
+
+# specify versions later (conda export)
