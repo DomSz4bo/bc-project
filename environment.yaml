@@ -10,5 +10,6 @@ dependencies:
     - langgraph
     - langchain
     - langchain-google-genai
+    - langchain-mcp-adapters
 
 # specify versions later (conda export)
