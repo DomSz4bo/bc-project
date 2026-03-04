@@ -42,7 +42,7 @@ The project currently utilizes **Google Gemini** as the primary LLM provider.
 ## 🔄 The AI Development Pipeline
 
 1. **Intake:** User discusses the goal with the Supervisor.
-2. **Design Lab (Sub-graph):**
+2. **Design Lab:**
 * **Analyst:** Drafts the "Fully Dressed" Use Case.
 * **Architect:** Maps the Use Case to a Mermaid Sequence Diagram.
 * **Critic:** Compares both for "Traceability" and logic errors.
@@ -74,7 +74,7 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
     * **User `APPROVED`** → QA Agent (Initiates Build Mode).
     * **Test Suite Created** → Engineer.
 
-### 2. 🧪 The Design Lab (Sub-graph)
+### 2. 🧪 The Design Lab
 
 #### A. The Requirements Analyst (`@analyst`)
 
@@ -127,7 +127,7 @@ bc-project/
 ├── src/
 │   ├── agents/                 # Node definitions for each agent
 │   │   ├── supervisor.py       # Central orchestrator
-│   │   ├── design_lab/         # Design Lab subgraph
+│   │   ├── design_lab/         # Design Lab
 │   │   │   ├── analyst.py      # Requirements analyst and Use Case Specialist
 │   │   │   ├── architect.py    # Technical modeler
 │   │   │   └── critic.py       # QA for design phase
