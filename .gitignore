@@ -1,10 +1,16 @@
 # Environment secrets
 .env
 
-# Project context for agents
+# Agent specific ignore files
 .geminiignore
 
+# Byte-compiled
 __pycache__/
+
+# Chainlit
 .chainlit/translations/
+
+# VS Code
+.vscode/*
 
 *.png
