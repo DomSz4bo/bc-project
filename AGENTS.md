@@ -6,6 +6,23 @@
 
 ---
 
+## 🚀 Quickstart
+```bash
+conda env create -f environment.yaml
+conda activate bc-project
+chainlit run app.py
+```
+
+---
+
+## 🔑 API Configuration
+The project currently utilizes **Google Gemini** as the primary LLM provider.
+1. Create a `.env` file in the root directory.
+2. Add your API key: `GOOGLE_API_KEY=your_gemini_api_key_here`
+3. Ensure the environment variable is loaded before running the application.
+
+---
+
 ## 🛠 Technology Stack
 
 ### Core Frameworks
@@ -18,7 +35,7 @@
 ### Environment Management
 * **Manager:** Conda.
 * **Definition:** `environment.yaml`.
-* **Key Libs:** `chainlit`, `langgraph`, `langchain`, `langchain-google-genai`.
+* **Key Libs:** `chainlit`, `langgraph`, `langchain`.
 
 ---
 
@@ -47,6 +64,15 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 * **Role:** High-level state manager.
 * **Responsibility:** Talks to the user and orchestrates the subagents.
 * **Decision Logic:** Determines if the system is in "Design Mode" (Design Lab), "Review Mode" (User Approval), or "Build Mode" (QA/Engineer).
+* **Transition Logic:**
+    * **User Intent** → Analyst (Initiates Design Lab).
+    * **Use Case Created** → Architect.
+    * **Diagram Created** → Critic.
+    * **Critic `FAIL`** → Back to Architect (with feedback loop).
+    * **Critic `PASS`** → User (for Approval).
+    * **User `MODIFICATION`** → Back to Analyst with new User Intent. 
+    * **User `APPROVED`** → QA Agent (Initiates Build Mode).
+    * **Test Suite Created** → Engineer.
 
 ### 2. 🧪 The Design Lab (Sub-graph)
 
@@ -93,22 +119,11 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 
 ---
 
-## 📦 Shared State (`AgentState`)
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `use_case` | `str` | The Cockburn-style text. |
-| `diagram` | `str` | The Mermaid.js code. |
-| `critic_feedback` | `str` | The latest critique (used for loops within the Design Lab). |
-| `design_status` | `enum` | `DRAFT`, `CRITIQUED`, `APPROVED`. |
-| `test_suite` | `str` | Generated test code. |
-| `final_code` | `str` | Generated implementation. |
-
----
-
 ## 📂 Project Structure
 ```text
 bc-project/
+├── .chainlit/                  # Chainlit configuration and translations
+├── public/                     # Static assets for Chainlit
 ├── src/
 │   ├── agents/                 # Node definitions for each agent
 │   │   ├── supervisor.py       # Central orchestrator
@@ -121,8 +136,8 @@ bc-project/
 │   └── graph/                  # LangGraph definitions
 │       ├── state.py            # Graph state schema
 │       └── workflow.py         # Graph construction and compilation
-├── public/                     # Static assets for Chainlit
 ├── app.py                      # Chainlit UI and message handlers
+├── chainlit.md                 # UI welcome screen content
 ├── environment.yaml            # Conda environment
 └── AGENTS.md                   # Project reference
 ```
