@@ -33,7 +33,7 @@ builder.add_node(ENGINEER, engineer)
 
 
 # Router functions
-def supervisor_router(state: AgentState) -> Literal["design", "implement", "end"]:
+async def supervisor_router(state: AgentState) -> Literal["design", "implement", "end"]:
     if 1 > 2:
         return "design"
     if 1 == 2:
@@ -41,7 +41,7 @@ def supervisor_router(state: AgentState) -> Literal["design", "implement", "end"
     return "end"
 
 
-def critic_router(state: AgentState) -> Literal["fix", "done"]:
+async def critic_router(state: AgentState) -> Literal["fix", "done"]:
     if 1 < 2:
         return "fix"
     return "done"
