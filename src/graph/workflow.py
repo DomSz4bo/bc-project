@@ -1,34 +1,74 @@
-from langgraph.graph import StateGraph
-from langgraph.checkpoint.memory import InMemorySaver
-from langchain.agents import create_agent
+from typing import Literal
 
-from src.graph.state import AgentState
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.graph import END, StateGraph
+
 from src.agents import (
-    supervisor,
     analyst,
     architect,
     critic,
-    quality_assurance,
     engineer,
+    quality_assurance,
+    supervisor,
 )
+from src.graph.state import AgentState
+
+# Node names
+SUPERVISOR = "Supervisor"
+ANALYST = "Analyst"
+ARCHITECT = "Architect"
+CRITIC = "Critic"
+QA = "Quality assurance"
+ENGINEER = "Engineer"
+
 
 builder = StateGraph(AgentState)
-builder.add_node("supervisor", supervisor)
-builder.add_node("analyst", analyst)
-builder.add_node("architect", architect)
-builder.add_node("critic", critic)
-builder.add_node("QA", quality_assurance)
-builder.add_node("engineer", engineer)
+# Node definitions
+builder.add_node(SUPERVISOR, supervisor)
+builder.add_node(ANALYST, analyst)
+builder.add_node(ARCHITECT, architect)
+builder.add_node(CRITIC, critic)
+builder.add_node(QA, quality_assurance)
+builder.add_node(ENGINEER, engineer)
 
-builder.set_entry_point("supervisor")
-builder.add_edge()
-# builder.add_conditional_edges()
-builder.set_finish_point()
 
+# Router functions
+def supervisor_router(state: AgentState) -> Literal["design", "implement", "end"]:
+    if 1 > 2:
+        return "design"
+    if 1 == 2:
+        return "implement"
+    return "end"
+
+
+def critic_router(state: AgentState) -> Literal["fix", "done"]:
+    if 1 < 2:
+        return "fix"
+    return "done"
+
+
+# Edge definitions
+builder.set_entry_point(SUPERVISOR)
+builder.add_conditional_edges(
+    SUPERVISOR, supervisor_router, {"design": ANALYST, "implement": QA, "end": END}
+)
+## Design lab
+builder.add_edge(ANALYST, ARCHITECT)
+builder.add_edge(ARCHITECT, CRITIC)
+builder.add_conditional_edges(
+    CRITIC, critic_router, {"fix": ARCHITECT, "done": SUPERVISOR}
+)
+## Implementation lab
+builder.add_edge(QA, ENGINEER)
+builder.add_edge(ENGINEER, SUPERVISOR)
+
+# Graph compilation
 checkpointer = InMemorySaver()
 graph = builder.compile(checkpointer=checkpointer)
 
+
 if __name__ == "__main__":
-    mmd = graph.get_graph().draw_mermaid()
+    graph.get_graph().draw_mermaid_png(output_file_path="graph.png")
+    mmd = graph.get_graph().draw_mermaid(with_styles=False)
     with open("graph.mmd", "w") as file:
         print(mmd, file=file)
