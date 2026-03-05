@@ -17,7 +17,7 @@ def get_llm(
     Defaults to environment variables if parameters are not provided.
 
     Args:
-        model: The name of the model to use (e.g., "gemma-3-27b-it").
+        model: The name of the model to use (e.g., "gemini-3.5-flash").
         provider: The model provider (e.g., "google_genai").
         **kwargs: Additional parameters passed to :func:`init_chat_model`.
     """
@@ -32,3 +32,5 @@ def get_llm(
 
 
 llm = get_llm()
+gemini_flash = get_llm("gemini-2.5-flash", "google_genai")
+gemma3 = get_llm("gemma-3-27b-it", "google_genai")
