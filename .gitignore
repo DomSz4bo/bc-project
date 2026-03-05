@@ -1,8 +1,9 @@
 # Environment secrets
 .env
 
-# Agent specific ignore files
+# Agent specific files
 .geminiignore
+.gemini/
 
 # Byte-compiled
 __pycache__/
@@ -13,5 +14,7 @@ __pycache__/
 # VS Code
 .vscode/*
 
+# Personal project notes
+notes/*
 *.png
 *.mmd
