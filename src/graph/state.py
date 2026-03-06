@@ -7,7 +7,8 @@ from langgraph.graph import add_messages
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     next_step: Literal["DESIGN", "IMPLEMENT", "USER"] | None
-    refined_intent: str | None
+    user_intent_summary: str | None
+    supervisor_phase: Literal["INTAKE", "APPROVAL"]
 
     # Design Lab outputs
     use_case: str | None
@@ -15,7 +16,7 @@ class AgentState(TypedDict):
     ## Critic validation
     critic_status: Literal["PASS", "FAIL"] | None
     critic_feedback: str | None
-    iteration_count: int = 0
+    iteration_count: int
 
     # Implementation Lab outputs
     test_suite: str | None
