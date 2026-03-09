@@ -50,7 +50,7 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 * **Intake Behavior:**
     * Engages the user in a structured dialogue to elicit a precise, unambiguous description of the desired goal.
     * Proactively offers suggestions, asks clarifying questions, and surfaces edge cases the user may not have considered.
-    * Produces a structured **User Intent Summary** once the goal is internally consistent and sufficiently detailed — this summary is the sole input passed to the Design Lab.
+    * Produces a **User Intent Summary** once the goal is internally consistent and sufficiently detailed — this summary is the sole input passed to the Design Lab.
 * **Post-Design Behavior:**
     * Presents the validated Use Case and Sequence Diagram to the user for approval.
     * On `MODIFICATION`: synthesizes user feedback into an updated User Intent Summary and re-initiates the Design Lab from the Analyst.
@@ -80,7 +80,6 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 * **Role:** Translates user intent into structured business logic.
 * **Responsibility:** Generates the **Cockburn "Sea-Level" Use Case**.
 * **Focus:** Primary/Secondary Actors, Pre/Post-conditions, and the numbered Main Success Scenario.
-* **Constraint:** Must define at least two "Extensions" (failure paths) for any complex goal.
 
 #### B. The System Architect
 
@@ -130,12 +129,12 @@ The primary state object threaded through the entire graph.
 |---|---|---|
 | `messages` | `list[AnyMessage]` | Full conversation history, managed via LangGraph's `add_messages` reducer. |
 | `next_step` | `"DESIGN" \| "IMPLEMENT" \| "USER" \| None` | Supervisor-owned routing signal. |
-| `refined_intent` | `str \| None` | Structured User Intent Summary produced by the Supervisor, passed as the sole input to the Design Lab. |
+| `user_intent_summary` | `str \| None` | Structured User Intent Summary produced by the Supervisor, passed as the sole input to the Design Lab. |
 | `supervisor_phase` | `"INTAKE" \| "APPROVAL"` | Controls Supervisor behavior and prompt construction. Defaults to `INTAKE`; set to `APPROVAL` by the Design Lab. |
 | `use_case` | `str \| None` | Current Cockburn Use Case produced by the Analyst. |
 | `sequence_diagram` | `str \| None` | Current Mermaid Sequence Diagram produced by the Architect. |
 | `critic_status` | `"PASS" \| "FAIL" \| None` | Internal Design Lab signal. Not consumed by the Supervisor. |
-| `critic_feedback` | `str \| None` | Specific revision instructions from the Critic on `FAIL`, routed back to the Analyst or Architect. |
+| `critic_feedback` | `str \| None` | Specific revision instructions from the Critic on `FAIL`, routed back to the Architect. |
 | `iteration_count` | `int` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_iters`. |
 | `test_suite` | `str \| None` | Test suite produced by the QA Agent, passed to the Engineer. |
 | `final_code` | `str \| None` | Output code produced by the Engineer. |
@@ -178,6 +177,7 @@ bc-project/
 ## 📝 Coding Standards
 
 ### Python & Chainlit
+* **Keys:** Use the `state["<key>"]` syntax instead of `state.get("<key>")` when possible.
 * **Async/Await:** Use `async def` for all Chainlit message handlers and LangGraph nodes to ensure non-blocking UI.
 * **Type Safety:** Use `Pydantic` models for all structured outputs.
 * **Typing**: Use the modern `type | None` syntax instead of `Optional`.
