@@ -3,6 +3,7 @@ from typing import Literal
 from langchain_core.globals import set_verbose
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from src.agents import (
     analyst,
@@ -13,7 +14,6 @@ from src.agents import (
     supervisor,
 )
 from src.graph.state import AgentState, GraphContext
-
 
 set_verbose(True)
 
@@ -47,11 +47,11 @@ async def critic_router(state: AgentState) -> Literal["fix", "done"]:
     raise ValueError(f"Unexpected critic_status value: {state['critic_status']}")
 
 
-def create_graph():
+def create_graph() -> CompiledStateGraph:
     """
     Creates and compiles the state graph for the AI development pipeline.
     """
-    builder = StateGraph(AgentState)
+    builder = StateGraph(AgentState, GraphContext)
 
     # Node definitions
     builder.add_node(SUPERVISOR, supervisor)
@@ -80,7 +80,7 @@ def create_graph():
 
     # Graph compilation
     checkpointer = InMemorySaver()
-    return builder.compile(checkpointer=checkpointer, context_schema=GraphContext)
+    return builder.compile(checkpointer=checkpointer)
 
 
 if __name__ == "__main__":
