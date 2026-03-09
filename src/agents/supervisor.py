@@ -1,6 +1,8 @@
 from typing import Literal
 
+from langchain_core.messages import AIMessage, SystemMessage
 from pydantic import BaseModel, Field
+from loguru import logger
 
 from src.graph.state import AgentState
 from src.utils.llm import gemini_flash
@@ -10,16 +12,17 @@ class SupervisorOutput(BaseModel):
     next_step: Literal["DESIGN", "IMPLEMENT", "USER"] = Field(
         description=("The next step. Must be one of DESIGN, IMPLEMENT and USER. "),
     )
-    refined_intent: str | None = Field(
+    user_intent_summary: str | None = Field(
         default=None,
         description=(
             "If next step is DESIGN, the summarized goal after any clarifications. "
             "Be detailed, include anything that may help the design team adhere to "
             "the user's requirements. "
-            "Else onit this field."
+            "Else omit this field."
         ),
     )
     message_to_user: str | None = Field(
+        default=None,
         description=(
             "If next step is USER, a message aimed at the user. Else omit this field."
         ),
@@ -30,9 +33,38 @@ llm_with_structure = gemini_flash.with_structured_output(SupervisorOutput)
 
 
 async def supervisor(state: AgentState) -> AgentState:
-    state["supervisor_phase"]
+    """
+    The Supervisor node logic.
+    """
+    phase = state.get("supervisor_phase", "INTAKE")
+    logger.debug("Supervisor initiated in mode={}.", phase)
 
-    return state
+    if phase == "INTAKE":
+        system_prompt = SYSTEM_PROMPT_INTAKE
+    else:
+        use_case = state["use_case"]
+        sequence_diagram = state["sequence_diagram"]
+        system_prompt = SYSTEM_PROMPT_APPROVAL.format(
+            use_case=use_case,
+            sequence_diagram=sequence_diagram,
+        )
+
+    messages = [SystemMessage(content=system_prompt)] + state["messages"]
+    response: SupervisorOutput = await llm_with_structure.ainvoke(messages)
+    # response: SupervisorOutput = SupervisorOutput(
+    #     next_step="DESIGN",
+    #     user_intent_summary="Summary",
+    #     message_to_user=None
+    # )
+    update: AgentState = {
+        "next_step": response.next_step,
+        "user_intent_summary": response.user_intent_summary,
+    }
+
+    if response.message_to_user:
+        update["messages"] = [AIMessage(content=response.message_to_user)]
+
+    return update
 
 
 SYSTEM_PROMPT_INTAKE = """
@@ -136,10 +168,19 @@ If the user's modification request is itself ambiguous, ask one focused clarifyi
 
 The following is the current validated design produced by the Design Lab. You must present this to the user and use it as the basis for all modification synthesis.
 
-[CURRENT DESIGN]
+<current_design>
+
 Use Case:
+<use_case>
 {use_case}
+</use_case>
 
 Sequence Diagram:
+<mermaid_sequece_diagram>
 {sequence_diagram}
+</mermaid_sequence_diagram>
+
+</current_design>
 """
+
+
