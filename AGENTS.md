@@ -30,8 +30,8 @@ THIS DOCUMENT IS A WORK IN PROGRESS AND IS OPEN TO CHANGES AS THE IMPLEMENTATION
 2. **Design Lab:**
     * **Analyst:** Drafts the "Fully Dressed" Use Case.
     * **Architect:** Maps the Use Case to a Mermaid Sequence Diagram.
-    * **Critic:** Compares both for "Traceability" and logic errors.
-    * *Loop:* If the Critic finds flaws, it sends the sequence diagram back for revision.
+    * **Critic:** Treats the Use Case as ground truth and audits the Diagram for faithful representation.
+    * *Loop:* On FAIL, the Critic routes the Diagram back to the Architect with specific revision instructions. The Analyst is not involved in this loop.
 3. **Approval:** User reviews the synchronized Use Case and Diagram.
 4. **Implementation:**
    * **Test Generation:** `QA Agent` writes tests based on the Use Case Extensions.
@@ -90,13 +90,14 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 
 #### C. The Design Critic
 
-* **Role:** Quality Assurance for the design phase.
-* **Responsibility:** Compares the Use Case (Text) vs. the Diagram (Visual).
-* **Output:** `PASS` (proceed) or `FAIL` (with specific feedback/instructions for the Architect to fix).
+* **Role:** Diagram auditor. The Use Case is treated as the validated ground truth and is not subject to critique.
+* **Responsibility:** Verifies that the Sequence Diagram faithfully and completely represents the Use Case. The original User Intent Summary is not consulted — the Critic's sole reference frame is the Use Case as written.
+* **Output:** `PASS` (proceed) or `FAIL` (with specific revision instructions routed exclusively to the Architect).
 * **Checklist:**
-  1. Do the Actors in the text match the Participants in the diagram?
-  2. Does every "Extension" in the Use Case have a matching `alt` block in the diagram?
-  3. Is the Mermaid syntax valid and renderable?
+  1. Do the Participants in the Diagram match the Actors declared in the Use Case?
+  2. Does every numbered step in the Main Success Scenario have a corresponding arrow in the Diagram?
+  3. Does every Extension in the Use Case have a corresponding alt block in the Diagram?
+
 
 ### 3. 📝 The QA Agent
 
