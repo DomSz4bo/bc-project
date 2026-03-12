@@ -86,7 +86,7 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 * **Role:** Technical modeler.
 * **Responsibility:** Translates the Analyst's Use Case into **Mermaid.js Sequence Diagram** syntax.
 * **Focus:** Participant lifecycle, message direction, and `alt`/`opt` logic blocks.
-* **Constraint:** Every numbered step in the Analyst's Use Case must have a corresponding arrow in the Diagram.
+* **Tools:** Calls a Mermaid validation tool to confirm the diagram is syntactically correct and renderable before passing it to the Critic.
 
 #### C. The Design Critic
 
