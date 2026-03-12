@@ -26,6 +26,11 @@ async def analyst(state: AgentState) -> AgentState:
 
     return {
         "use_case": response.content,
+        # Nullify other Design Lab fields
+        "sequence_diagram": None,
+        "critic_status": None,
+        "critic_feedback": None,
+        "iteration_count": 0
     }
 
 
