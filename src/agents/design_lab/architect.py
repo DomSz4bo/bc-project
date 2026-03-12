@@ -43,7 +43,9 @@ async def architect(state: AgentState) -> AgentState:
 
         messages += [
             AIMessage(response.content),
-            HumanMessage(validation_result.message),
+            HumanMessage(
+                DIAGRAM_FIX_PROMPT.format(error=validation_result.error_message)
+            ),
         ]
 
     if validation_result.is_valid:
@@ -99,4 +101,21 @@ sequenceDiagram
 
 ### Faithfulness vs. Comprehensibility
 When these two goals conflict, faithfulness wins. An accurate diagram that is slightly harder to read is preferable to a clean diagram that misrepresents the Use Case.
+"""
+
+DIAGRAM_FIX_PROMPT = """
+❌ MERMAID VALIDATION FAILED:
+{error}
+
+**REQUIRED ACTIONS:**
+1. **ANALYZE the error message** above from Mermaid's parser
+2. **GENERATE CORRECTED Mermaid code** that fixes the identified problem
+
+**COMMON FIXES for Mermaid errors:**
+- Check for missing arrows
+- Verify node syntax and quotes
+- Ensure proper diagram type declaration
+- Fix special character escaping
+- Check for proper indentation
+- Validate connection syntax
 """

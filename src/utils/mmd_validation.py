@@ -21,7 +21,7 @@ rendering_tool = asyncio.run(client.get_tools())[0]
 
 class ValidationResult(NamedTuple):
     is_valid: bool
-    message: str | None
+    error_message: str | None
 
 
 async def validate_mermaid(mermaid_code: str) -> ValidationResult:
