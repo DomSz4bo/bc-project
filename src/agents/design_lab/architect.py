@@ -22,7 +22,7 @@ async def architect(state: AgentState) -> AgentState:
     messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=use_case)]
 
     critic_status = state.get("critic_status", None)
-    if critic_status == "FAIL":
+    if critic_status is not None and critic_status == "FAIL":
         logger.debug("Architect is in FIX mode based on Critic feedback.")
         critic_feedback = state.get("critic_feedback")
         previous_diagram = state.get("sequence_diagram")
