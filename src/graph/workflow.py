@@ -33,7 +33,7 @@ async def supervisor_router(state: AgentState) -> Literal["design", "implement",
             return "design"
         case "IMPLEMENT":
             return "implement"
-        case "USER" | None:
+        case "USER":
             return "end"
     raise ValueError(f"Unexpected next_step value: {state['next_step']}")
 
@@ -42,7 +42,7 @@ async def critic_router(state: AgentState) -> Literal["fix", "done"]:
     match state["critic_status"]:
         case "FAIL":
             return "fix"
-        case "PASS" | None:
+        case "PASS" | "LIMIT":
             return "done"
     raise ValueError(f"Unexpected critic_status value: {state['critic_status']}")
 
