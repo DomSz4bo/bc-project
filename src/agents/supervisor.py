@@ -51,11 +51,6 @@ async def supervisor(state: AgentState) -> AgentState:
 
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
     response: SupervisorOutput = await llm_with_structure.ainvoke(messages)
-    # response: SupervisorOutput = SupervisorOutput(
-    #     next_step="DESIGN",
-    #     user_intent_summary="Summary",
-    #     message_to_user=None
-    # )
     update: AgentState = {
         "next_step": response.next_step,
         "user_intent_summary": response.user_intent_summary,
