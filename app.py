@@ -2,7 +2,10 @@ import chainlit as cl
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
-from src.graph.workflow import graph
+from src.graph.workflow import create_graph 
+
+
+graph =  create_graph()
 
 
 @cl.on_message
@@ -33,8 +36,8 @@ async def on_message(msg: cl.Message):
         # 3. Stream content to the correct place
         elif kind == "on_chat_model_stream":
             content = event["data"]["chunk"].content
-            if not content: continue
-
+            if not content: 
+                continue
             if "final_stream" in event.get("tags", []):
                 await final_answer.stream_token(content)
             elif run_id in active_steps:
