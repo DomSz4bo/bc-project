@@ -25,8 +25,8 @@ llm_with_structure = gemini_flash.with_structured_output(CriticOutput)
 
 
 async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
-    iteration_count = state["iteration_count"]
-    if iteration_count + 1 >= runtime.context["max_iters"]:
+    revision_count = state["revision_count"]
+    if revision_count >= runtime.context["max_revisions"]:
         return {
             "critic_status": "LIMIT",
             "supervisor_phase": "APPROVAL",
@@ -47,6 +47,9 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
         "critic_status": response.verdict,
         "critic_feedback": response.feedback,
         "supervisor_phase": "APPROVAL",
+        "revision_count": revision_count
+        if response.verdict == "PASS"
+        else revision_count + 1,
     }
 
 

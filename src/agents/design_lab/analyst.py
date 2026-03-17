@@ -30,7 +30,7 @@ async def analyst(state: AgentState) -> AgentState:
         "sequence_diagram": None,
         "critic_status": None,
         "critic_feedback": None,
-        "iteration_count": 0
+        "revision_count": 0
     }
 
 

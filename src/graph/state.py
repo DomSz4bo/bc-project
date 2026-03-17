@@ -16,7 +16,7 @@ class AgentState(TypedDict):
     ## Critic validation
     critic_status: Literal["PASS", "FAIL", "LIMIT"] | None
     critic_feedback: str | None
-    iteration_count: int
+    revision_count: int
 
     # Implementation Lab outputs
     test_suite: str | None
@@ -24,4 +24,4 @@ class AgentState(TypedDict):
 
 
 class GraphContext(TypedDict):
-    max_iters: int
+    max_revisions: int

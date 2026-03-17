@@ -136,7 +136,7 @@ The primary state object threaded through the entire graph.
 | `sequence_diagram` | `str \| None` | Current Mermaid Sequence Diagram produced by the Architect. |
 | `critic_status` | `"PASS" \| "FAIL" \| None` | Internal Design Lab signal. Not consumed by the Supervisor. |
 | `critic_feedback` | `str \| None` | Specific revision instructions from the Critic on `FAIL`, routed back to the Architect. |
-| `iteration_count` | `int` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_iters`. |
+| `revision_count` | `int` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_revisions`. |
 | `test_suite` | `str \| None` | Test suite produced by the QA Agent, passed to the Engineer. |
 | `final_code` | `str \| None` | Output code produced by the Engineer. |
 
@@ -146,7 +146,7 @@ Static configuration passed at graph compile time, not modified during execution
 
 | Field | Type | Description |
 |---|---|---|
-| `max_iters` | `int` | Maximum number of Critic revision cycles before the Design Lab halts and surfaces the issue to the user. |
+| `max_revisions` | `int` | Maximum number of Critic revision cycles before the Design Lab halts and surfaces the issue to the user. |
 
 ---
 
