@@ -134,7 +134,7 @@ The primary state object threaded through the entire graph.
 | `supervisor_phase` | `"INTAKE" \| "APPROVAL"` | Controls Supervisor behavior and prompt construction. Defaults to `INTAKE`; set to `APPROVAL` by the Design Lab. |
 | `use_case` | `str \| None` | Current Cockburn Use Case produced by the Analyst. |
 | `sequence_diagram` | `str \| None` | Current Mermaid Sequence Diagram produced by the Architect. |
-| `critic_status` | `"PASS" \| "FAIL" \| None` | Internal Design Lab signal. Not consumed by the Supervisor. |
+| `critic_verdict` | `"PASS" \| "FAIL" \| None` | Internal Design Lab signal. Not consumed by the Supervisor. |
 | `critic_feedback` | `str \| None` | Specific revision instructions from the Critic on `FAIL`, routed back to the Architect. |
 | `revision_count` | `int` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_revisions`. |
 | `test_suite` | `str \| None` | Test suite produced by the QA Agent, passed to the Engineer. |

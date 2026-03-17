@@ -28,7 +28,7 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     revision_count = state["revision_count"]
     if revision_count >= runtime.context["max_revisions"]:
         return {
-            "critic_status": "LIMIT",
+            "critic_verdict": "LIMIT",
             "supervisor_phase": "APPROVAL",
             "critic_feedback": None,
         }
@@ -44,7 +44,7 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     response: CriticOutput = await llm_with_structure.ainvoke(messages)
 
     return {
-        "critic_status": response.verdict,
+        "critic_verdict": response.verdict,
         "critic_feedback": response.feedback,
         "supervisor_phase": "APPROVAL",
         "revision_count": revision_count

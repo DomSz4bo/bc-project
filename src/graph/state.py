@@ -14,7 +14,7 @@ class AgentState(TypedDict):
     use_case: str | None
     sequence_diagram: str | None
     ## Critic validation
-    critic_status: Literal["PASS", "FAIL", "LIMIT"] | None
+    critic_verdict: Literal["PASS", "FAIL", "LIMIT"] | None
     critic_feedback: str | None
     revision_count: int
 

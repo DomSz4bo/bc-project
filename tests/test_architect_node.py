@@ -62,7 +62,7 @@ async def test_architect_fix_mode():
     Alice->>John: John, can you hear me?
     John-->>Alice: Hi Alice, I can hear you!
     John-->>Alice: I feel great!```""",
-            "critic_status": "FAIL",
+            "critic_verdict": "FAIL",
             "critic_feedback": "Missing validation step.",
         }
 

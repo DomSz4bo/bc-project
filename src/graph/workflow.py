@@ -39,12 +39,12 @@ async def supervisor_router(state: AgentState) -> Literal["design", "implement",
 
 
 async def critic_router(state: AgentState) -> Literal["fix", "done"]:
-    match state["critic_status"]:
+    match state["critic_verdict"]:
         case "FAIL":
             return "fix"
         case "PASS" | "LIMIT":
             return "done"
-    raise ValueError(f"Unexpected critic_status value: {state['critic_status']}")
+    raise ValueError(f"Unexpected critic_verdict value: {state['critic_verdict']}")
 
 
 def create_graph() -> CompiledStateGraph:

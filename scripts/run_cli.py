@@ -48,8 +48,8 @@ async def run_interactive_cli():
                         print(f"  ➜ next_step: {updates['next_step']}")
                     if "supervisor_phase" in updates:
                         print(f"  ➜ phase: {updates['supervisor_phase']}")
-                    if "critic_status" in updates:
-                        print(f"  ➜ critic: {updates['critic_status']}")
+                    if "critic_verdict" in updates:
+                        print(f"  ➜ critic: {updates['critic_verdict']}")
                     if "use_case" in updates:
                         print(f"\n--- USE CASE ---\n{updates['use_case']}\n")
                     if "sequence_diagram" in updates:
