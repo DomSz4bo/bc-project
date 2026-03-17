@@ -38,7 +38,7 @@ async def run_interactive_cli():
             # or stream_mode="updates" to see only what changed.
             # "values" is often easier for tracking the message list.
             async for event in graph.astream(
-                input_state, config=config, stream_mode="updates"
+                input_state, config=config, context={"max_revisions": 1}, stream_mode="updates"
             ):
                 for node_name, updates in event.items():
                     print(f"[{node_name}] running...")
