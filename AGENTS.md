@@ -92,11 +92,7 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 
 * **Role:** Diagram auditor. The Use Case is treated as the validated ground truth and is not subject to critique.
 * **Responsibility:** Verifies that the Sequence Diagram faithfully and completely represents the Use Case. The original User Intent Summary is not consulted — the Critic's sole reference frame is the Use Case as written.
-* **Output:** `PASS` (proceed) or `FAIL` (with specific revision instructions routed exclusively to the Architect).
-* **Checklist:**
-  1. Do the Participants in the Diagram match the Actors declared in the Use Case?
-  2. Does every numbered step in the Main Success Scenario have a corresponding arrow in the Diagram?
-  3. Does every Extension in the Use Case have a corresponding alt block in the Diagram?
+* **Output:** `PASS` (proceed) or `FAIL` (with specific revision instructions routed exclusively to the Architect). And `LIMIT` in case `max_revisions` number of cycles has been reached.
 
 
 ### 3. 📝 The QA Agent
@@ -108,6 +104,7 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
     * Uses **Preconditions** from the Use Case to set up test mocks.
     * Uses **Extensions** from the Use Case to define failure-case test functions.
     * Must verify **Success End Conditions** in the assertions.
+
 
 ### 4. 🔨 The Implementation Engineer
 
