@@ -3,6 +3,7 @@ from typing import Literal
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.runtime import Runtime
 from pydantic import BaseModel, Field
+from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_flash
@@ -25,8 +26,11 @@ llm_with_structure = gemini_flash.with_structured_output(CriticOutput)
 
 
 async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
+    logger.debug("Critic node initiated.")
+
     revision_count = state["revision_count"]
     if revision_count >= runtime.context["max_revisions"]:
+        logger.debug("Critic node - revision limit hit.")
         return {
             "critic_verdict": "LIMIT",
             "supervisor_phase": "APPROVAL",
@@ -42,7 +46,7 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
         ),
     ]
     response: CriticOutput = await llm_with_structure.ainvoke(messages)
-
+    logger.debug("Critic finished evalauting artifacts.")
     return {
         "critic_verdict": response.verdict,
         "critic_feedback": response.feedback,
