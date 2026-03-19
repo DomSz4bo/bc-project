@@ -2,7 +2,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from loguru import logger
 
 from src.graph.state import AgentState
-from src.utils.llm import gemma3
+from src.utils.llm import gemini_3_flash_lite as llm
 from src.utils.mmd_validation import validate_mermaid
 from src.utils.markdown import extract_block
 from src.utils.errors import MermaidValidationLimitExceeded
@@ -34,7 +34,7 @@ async def architect(state: AgentState) -> AgentState:
     SELF_FIX_LIMIT = 3
 
     for _ in range(SELF_FIX_LIMIT):
-        response = await gemma3.ainvoke(messages)
+        response = await llm.ainvoke(messages)
         mmd_code = extract_block(response.content, "mermaid")
 
         validation_result = await validate_mermaid(mmd_code)

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from loguru import logger
 
 from src.graph.state import AgentState
-from src.utils.llm import gemini_flash
+from src.utils.llm import gemini_3_flash as llm
 
 
 class SupervisorOutput(BaseModel):
@@ -29,7 +29,7 @@ class SupervisorOutput(BaseModel):
     )
 
 
-llm_with_structure = gemini_flash.with_structured_output(SupervisorOutput)
+llm_with_structure = llm.with_structured_output(SupervisorOutput)
 
 
 async def supervisor(state: AgentState) -> AgentState:

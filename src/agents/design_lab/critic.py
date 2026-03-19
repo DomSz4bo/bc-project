@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_flash
+from src.utils.llm import gemini_2p5_flash as llm
 
 
 class CriticOutput(BaseModel):
@@ -22,7 +22,7 @@ class CriticOutput(BaseModel):
     )
 
 
-llm_with_structure = gemini_flash.with_structured_output(CriticOutput)
+llm_with_structure = llm.with_structured_output(CriticOutput)
 
 
 async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:

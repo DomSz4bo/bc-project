@@ -2,7 +2,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from loguru import logger
 
 from src.graph.state import AgentState
-from src.utils.llm import gemma3
+from src.utils.llm import gemini_3_flash_lite as llm
 
 
 async def analyst(state: AgentState) -> AgentState:
@@ -20,7 +20,7 @@ async def analyst(state: AgentState) -> AgentState:
         content=f"USER INTENT SUMMARY:\n\n{user_intent_summary}"
     )
 
-    response = await gemma3.ainvoke([system_message, human_message])
+    response = await llm.ainvoke([system_message, human_message])
 
     logger.debug("Analyst completed Use Case generation.")
 

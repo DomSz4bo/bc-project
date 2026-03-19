@@ -16,7 +16,7 @@ async def test_architect_generation():
     John-->>-Alice: I feel great!```"""
     mock_response = AIMessage(content=mock_diagram)
 
-    with patch("src.agents.design_lab.architect.gemma3") as mock_llm:
+    with patch("src.agents.design_lab.architect.llm") as mock_llm:
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
         state = {
@@ -51,7 +51,7 @@ async def test_architect_fix_mode():
     John-->>-Alice: I feel great!```"""
     mock_response = AIMessage(content=mock_diagram)
 
-    with patch("src.agents.design_lab.architect.gemma3") as mock_llm:
+    with patch("src.agents.design_lab.architect.llm") as mock_llm:
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
         state = {

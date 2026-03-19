@@ -11,7 +11,7 @@ async def test_analyst_generation():
     mock_use_case = "# USE CASE: Login System\n..."
     mock_response = AIMessage(content=mock_use_case)
 
-    with patch("src.agents.design_lab.analyst.gemma3") as mock_llm:
+    with patch("src.agents.design_lab.analyst.llm") as mock_llm:
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
         state = {
