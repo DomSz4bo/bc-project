@@ -5,7 +5,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3_flash as llm
+from src.utils.llm import gemini_3_flash_lite as llm
 
 
 class Component(BaseModel):
