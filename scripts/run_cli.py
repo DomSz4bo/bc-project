@@ -14,6 +14,22 @@ async def run_interactive_cli():
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
 
+    current_use_case = None
+    current_sequence_diagram = None
+
+    def save_output():
+        with open("output.md", "w", encoding="utf-8") as f:
+            f.write("# Design Lab Output\n\n")
+            f.write("## Use Case\n\n")
+            f.write(current_use_case or "Not yet generated.")
+            f.write("\n\n## Sequence Diagram\n\n")
+            if current_sequence_diagram:
+                f.write("```mermaid\n")
+                f.write(current_sequence_diagram)
+                f.write("\n```\n")
+            else:
+                f.write("Not yet generated.")
+
     print("=" * 50)
     print("🚀 WORKFLOW INTERACTIVE CLI")
     print(f"Session ID: {thread_id}")
@@ -50,12 +66,17 @@ async def run_interactive_cli():
                         print(f"  ➜ phase: {updates['supervisor_phase']}")
                     if "critic_verdict" in updates:
                         print(f"  ➜ critic: {updates['critic_verdict']}")
-                    if "use_case" in updates:
-                        print(f"\n--- USE CASE ---\n{updates['use_case']}\n")
-                    if "sequence_diagram" in updates:
-                        print(
-                            f"\n--- SEQUENCE DIAGRAM ---\n{updates['sequence_diagram']}\n"
-                        )
+                    if "critic_feedback" in updates:
+                        print(f"  ➜ feedback: {updates['critic_feedback']}")
+
+                    # Update output.md if design elements changed
+                    if "use_case" in updates or "sequence_diagram" in updates:
+                        if "use_case" in updates:
+                            current_use_case = updates["use_case"]
+                        if "sequence_diagram" in updates:
+                            current_sequence_diagram = updates["sequence_diagram"]
+                        save_output()
+                        print("  ➜ Updated output.md")
 
                     # If the node added messages, print the last one (the AI response)
                     if "messages" in updates:
