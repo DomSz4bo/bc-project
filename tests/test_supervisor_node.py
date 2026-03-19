@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from src.agents.supervisor import supervisor, SupervisorOutput
+
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+from src.agents.supervisor import SupervisorOutput, supervisor
 
 
 @pytest.mark.asyncio

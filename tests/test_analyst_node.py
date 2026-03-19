@@ -1,7 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
+
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
 from src.agents.design_lab.analyst import analyst
+
 
 @pytest.mark.asyncio
 async def test_analyst_generation():
@@ -22,12 +25,12 @@ async def test_analyst_generation():
 
         assert "use_case" in result
         assert result["use_case"] == mock_use_case
-        
+
         mock_llm.ainvoke.assert_called_once()
         called_messages = mock_llm.ainvoke.call_args[0][0]
-        
+
         assert isinstance(called_messages[0], SystemMessage)
         assert "Use Case" in called_messages[0].content
-        
+
         assert isinstance(called_messages[1], HumanMessage)
         assert "I want a JWT login system." in called_messages[1].content

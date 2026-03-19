@@ -1,7 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
+
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
 from src.agents.design_lab.architect import architect
+
 
 @pytest.mark.asyncio
 async def test_architect_generation():
@@ -27,13 +30,13 @@ async def test_architect_generation():
 
         assert "sequence_diagram" in result
         assert result["sequence_diagram"] == mock_diagram
-        
+
         mock_llm.ainvoke.assert_called_once()
         called_messages = mock_llm.ainvoke.call_args[0][0]
-        
+
         assert isinstance(called_messages[0], SystemMessage)
         assert "System Architect" in called_messages[0].content
-        
+
         assert isinstance(called_messages[1], HumanMessage)
         assert "USE CASE:" in called_messages[1].content
 
@@ -44,7 +47,7 @@ async def test_architect_fix_mode():
     Verify the architect node enters fix mode when critic feedback is present.
     """
     mock_diagram = """```mermaid
-    sequenceDiagram
+sequenceDiagram
     Alice->>+John: Hello John, how are you?
     Alice->>+John: John, can you hear me?
     John-->>-Alice: Hi Alice, I can hear you!
@@ -57,7 +60,7 @@ async def test_architect_fix_mode():
         state = {
             "use_case": "# USE CASE: Login System\n...",
             "sequence_diagram": """```mermaid
-    sequenceDiagram
+sequenceDiagram
     Alice->>John: Hello John, how are you?
     Alice->>John: John, can you hear me?
     John-->>Alice: Hi Alice, I can hear you!
@@ -69,9 +72,9 @@ async def test_architect_fix_mode():
         result = await architect(state)
 
         assert result["sequence_diagram"] == mock_diagram
-        
+
         mock_llm.ainvoke.assert_called_once()
         called_messages = mock_llm.ainvoke.call_args[0][0]
-        
+
         assert "```mermaid\n" in called_messages[2].content
         assert "Missing validation step." in called_messages[3].content
