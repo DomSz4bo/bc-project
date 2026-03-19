@@ -12,6 +12,7 @@ from src.agents import (
     engineer,
     quality_assurance,
     supervisor,
+    scaffolder,
 )
 from src.graph.state import AgentState, GraphContext
 
@@ -22,6 +23,7 @@ SUPERVISOR = "Supervisor"
 ANALYST = "Analyst"
 ARCHITECT = "Architect"
 CRITIC = "Critic"
+SCAFFOLDER = "Scaffolder"
 QA = "Quality assurance"
 ENGINEER = "Engineer"
 
@@ -58,13 +60,16 @@ def create_graph() -> CompiledStateGraph:
     builder.add_node(ANALYST, analyst)
     builder.add_node(ARCHITECT, architect)
     builder.add_node(CRITIC, critic)
+    builder.add_node(SCAFFOLDER, scaffolder)
     builder.add_node(QA, quality_assurance)
     builder.add_node(ENGINEER, engineer)
 
     # Edge definitions
     builder.set_entry_point(SUPERVISOR)
     builder.add_conditional_edges(
-        SUPERVISOR, supervisor_router, {"design": ANALYST, "implement": QA, "end": END}
+        SUPERVISOR,
+        supervisor_router,
+        {"design": ANALYST, "implement": SCAFFOLDER, "end": END},
     )
 
     ## Design lab
@@ -75,8 +80,9 @@ def create_graph() -> CompiledStateGraph:
     )
 
     ## Implementation lab
+    builder.add_edge(SCAFFOLDER, QA)
     builder.add_edge(QA, ENGINEER)
-    builder.add_edge(ENGINEER, SUPERVISOR)
+    builder.add_edge(ENGINEER, END)
 
     # Graph compilation
     checkpointer = InMemorySaver()
