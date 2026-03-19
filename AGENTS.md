@@ -34,8 +34,9 @@ THIS DOCUMENT IS A WORK IN PROGRESS AND IS OPEN TO CHANGES AS THE IMPLEMENTATION
     * *Loop:* On FAIL, the Critic routes the Diagram back to the Architect with specific revision instructions. The Analyst is not involved in this loop.
 3. **Approval:** User reviews the synchronized Use Case and Diagram.
 4. **Implementation:**
-   * **Test Generation:** `QA Agent` writes tests based on the Use Case Extensions.
-   * **Code Generation:** `Engineer Agent` writes code to satisfy the tests and diagram.
+   * **Scaffolding:** `Scaffolder Agent` parses the Sequence Diagram, creates the project directory structure, and writes empty class shells as stub files.
+   * **Test Generation:** `QA Agent` writes tests covering the full Use Case — Main Success Scenario, Extensions, and Sequence Diagram interactions — adding function stubs to the scaffold as needed.
+   * **Code Generation:** `Engineer Agent` fills in the stub implementations to satisfy the test suite, using a `run_tests` tool to iteratively verify correctness.
 
 ---
 
@@ -69,8 +70,8 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
     * `INTAKE`: Default phase. The Supervisor conducts the requirements conversation and produces the User Intent Summary.
     * `APPROVAL`: Entered when the Design Lab sets `supervisor_phase = APPROVAL` in graph state upon a Critic `PASS`. The Supervisor's system prompt is conditionally reconstructed to include the current Use Case and Sequence Diagram as read-only context, enabling it to present the design to the user and synthesize modification feedback accurately.
 
-> `DESIGN` represents a transition the Design Lab workflow (Analyst -> Architect <-> Critic). \
-`IMPLEMENT` represents a transition to the Implementation pipeline (QA -> Engineer)
+> `DESIGN` represents a transition to the Design Lab workflow (Analyst -> Architect <-> Critic). \
+`IMPLEMENT` represents a transition to the Implementation pipeline (Scaffolder -> QA -> Engineer)
 
 
 ### 2. 🧪 The Design Lab
@@ -95,23 +96,44 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 * **Output:** `PASS` (proceed) or `FAIL` (with specific revision instructions routed exclusively to the Architect). And `LIMIT` in case `max_revisions` number of cycles has been reached.
 
 
-### 3. 📝 The QA Agent
+### 3. The Interface Scaffolder
+
+* **Role:** Project scaffolding agent. First step of the Implementation pipeline.
+* **Inputs:** Validated Use Case + Sequence Diagram.
+* **Responsibility:** Translates the Sequence Diagram's structural information into a concrete project scaffold on disk. Provides a shared naming reference that both the QA Agent and Engineer operate against, eliminating ambiguity about class and module names.
+* **Logic:**
+    * Parses Sequence Diagram **participants** → derives class names and module layout.
+    * Parses **solid arrows** (messages) → derives method names.
+    * Creates the project directory structure under `GraphContext.working_directory`.
+    * Writes one stub file per system component containing empty class shells — no method signatures, no implementation bodies.
+* **Scope boundary:** The Scaffolder is responsible for structural scaffolding only — directory layout and empty class shells. It does **not** add function signatures; that responsibility belongs to the QA Agent, which derives signatures from the testing requirements. This ensures function interfaces emerge from the TDD process rather than being predicted upfront.
+* **Tools:** Filesystem access to create directories and write stub files.
+
+### 4. 📝 The QA Agent
 
 * **Role:** TDD Lead.
-* **Inputs:** Validated Use Case + Diagram.
-* **Outputs:** Test suite.
+* **Inputs:** Validated Use Case + Sequence Diagram + project scaffold on disk.
+* **Outputs:** Pytest test suite written into the project scaffold.
 * **Logic:**
-    * Uses **Preconditions** from the Use Case to set up test mocks.
+    * Uses **Preconditions** from the Use Case to set up test mocks and fixtures.
+    * Tests the **Main Success Scenario** step-by-step to verify the happy path executes correctly.
     * Uses **Extensions** from the Use Case to define failure-case test functions.
-    * Must verify **Success End Conditions** in the assertions.
+    * Derives interaction-level tests from the **Sequence Diagram** — verifying message ordering, participant interactions, and `alt`/`opt` conditional branches.
+    * Must verify **Success End Conditions** in assertions.
+    * Adds function stubs to the scaffold files as needed while writing tests — function signatures emerge from testing requirements, not from prior prediction.
+* **Language/Framework:** Python + pytest. Tests follow pytest conventions (`conftest.py` for fixtures, `test_*.py` naming).
 
-
-### 4. 🔨 The Implementation Engineer
+### 5. 🔨 The Implementation Engineer
 
 * **Role:** Full-stack Developer.
-* **Inputs:** Validated Design + Test Suite.
-* **Outputs:** Code.
-* **Logic:** Implements classes/methods to pass the test suite while adhering to the Sequence Diagram flow.
+* **Inputs:** Validated Use Case + Sequence Diagram + project scaffold with test suite on disk.
+* **Outputs:** Completed implementation filling all stub bodies in the project scaffold.
+* **Logic:**
+    * Fills in stub implementations to satisfy the test suite.
+    * Adheres to the Sequence Diagram interaction flow when implementing method bodies.
+    * Uses a `run_tests` tool to execute the pytest suite and iteratively correct failures.
+    * Implementation decisions — internal structure, patterns, algorithms — are the Engineer's autonomy. The scaffold and test suite define the interface and expected behaviour; they do not constrain how the Engineer satisfies them.
+* **Tools:** Filesystem access to read and edit scaffold files + `run_tests` tool to execute pytest and receive structured output.
 
 ---
 
@@ -134,8 +156,6 @@ The primary state object threaded through the entire graph.
 | `critic_verdict` | `"PASS" \| "FAIL" \| None` | Internal Design Lab signal. Not consumed by the Supervisor. |
 | `critic_feedback` | `str \| None` | Specific revision instructions from the Critic on `FAIL`, routed back to the Architect. |
 | `revision_count` | `int` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_revisions`. |
-| `test_suite` | `str \| None` | Test suite produced by the QA Agent, passed to the Engineer. |
-| `final_code` | `str \| None` | Output code produced by the Engineer. |
 
 #### `GraphContext`
 
@@ -144,6 +164,7 @@ Static configuration passed at graph compile time, not modified during execution
 | Field | Type | Description |
 |---|---|---|
 | `max_revisions` | `int` | Maximum number of Critic revision cycles before the Design Lab halts and surfaces the issue to the user. |
+| `working_directory` | `str` | Root path for all filesystem operations. Shared by the Scaffolder, QA Agent, and Engineer so all three operate on the same project without runtime negotiation. |
 
 ---
 
@@ -159,6 +180,7 @@ bc-project/
 │   │   │   ├── analyst.py      # Requirements analyst and Use Case Specialist
 │   │   │   ├── architect.py    # Technical modeler
 │   │   │   └── critic.py       # QA for design phase
+│   │   ├── scaffolder.py      # Project scaffolding agent
 │   │   ├── qa.py               # Test suite creator
 │   │   └── engineer.py         # Code generator
 │   └── graph/                  # LangGraph definitions

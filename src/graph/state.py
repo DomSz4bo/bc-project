@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated, Literal, TypedDict
 
 from langchain.messages import AnyMessage
@@ -18,10 +19,7 @@ class AgentState(TypedDict):
     critic_feedback: str | None
     revision_count: int
 
-    # Implementation Lab outputs
-    test_suite: str | None
-    final_code: str | None
-
 
 class GraphContext(TypedDict):
     max_revisions: int
+    working_directory: Path
