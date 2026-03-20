@@ -18,7 +18,6 @@ from src.graph.state import AgentState, GraphContext
 
 set_verbose(True)
 
-# Node names
 SUPERVISOR = "Supervisor"
 ANALYST = "Analyst"
 ARCHITECT = "Architect"
@@ -28,7 +27,6 @@ QA = "Quality assurance"
 ENGINEER = "Engineer"
 
 
-# Router functions
 async def supervisor_router(state: AgentState) -> Literal["design", "implement", "end"]:
     match state["next_step"]:
         case "DESIGN":
@@ -55,7 +53,6 @@ def create_graph() -> CompiledStateGraph:
     """
     builder = StateGraph(AgentState, GraphContext)
 
-    # Node definitions
     builder.add_node(SUPERVISOR, supervisor)
     builder.add_node(ANALYST, analyst)
     builder.add_node(ARCHITECT, architect)
@@ -64,7 +61,6 @@ def create_graph() -> CompiledStateGraph:
     builder.add_node(QA, quality_assurance)
     builder.add_node(ENGINEER, engineer)
 
-    # Edge definitions
     builder.set_entry_point(SUPERVISOR)
     builder.add_conditional_edges(
         SUPERVISOR,
@@ -90,7 +86,6 @@ def create_graph() -> CompiledStateGraph:
 
 
 if __name__ == "__main__":
-    # Generate visualization
     graph = create_graph()
     graph.get_graph().draw_mermaid_png(output_file_path="graph.png")
     mmd = graph.get_graph().draw_mermaid(with_styles=False)

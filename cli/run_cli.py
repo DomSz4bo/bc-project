@@ -39,7 +39,7 @@ async def run_interactive_cli():
     style = Style.from_dict(
         {
             "prompt": "ansicyan bold",
-            "bottom-toolbar": "#6446A0",
+            "bottom-toolbar": "#6446A0 bg:ansiwhite",
             "key": "bold",
             "": "ansigreen",
         }
