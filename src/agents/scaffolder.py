@@ -10,10 +10,10 @@ from src.utils.llm import gemini_3_flash_lite as llm
 
 class Component(BaseModel):
     class_name: str = Field(
-        description="The PascalCase name of the class (e.g., VendingMachine)"
+        description="The PascalCase name of the class (e.g., PaymentProcessor)"
     )
     file_name: str = Field(
-        description="The snake_case name of the file without extension (e.g., vending_machine)"
+        description="The snake_case name of the file without extension (e.g., payment_processor)"
     )
 
 
@@ -23,7 +23,6 @@ class ScaffoldPlan(BaseModel):
     )
 
 
-# Bind the structured output at the module level
 structured_llm = llm.with_structured_output(ScaffoldPlan)
 
 

@@ -1,6 +1,7 @@
 import asyncio
 import os
 import uuid
+from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage
 from prompt_toolkit import PromptSession
@@ -98,10 +99,12 @@ async def run_interactive_cli():
             input_state = {"messages": [HumanMessage(content=user_input)]}
             print("\n" + "-" * 20 + " Workflow Execution " + "-" * 20)
 
+            graph_context = {"max_revisions": 1, "working_directory": Path.cwd()}
+
             async for event in graph.astream(
                 input_state,
                 config=config,
-                context={"max_revisions": 1},
+                context=graph_context,
                 stream_mode="updates",
             ):
                 for node_name, updates in event.items():
