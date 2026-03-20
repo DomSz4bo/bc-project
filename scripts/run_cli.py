@@ -1,7 +1,9 @@
 import asyncio
+import json
 import os
 import uuid
 
+from langchain_core.load import dumpd
 from langchain_core.messages import AIMessage, HumanMessage
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
@@ -12,6 +14,28 @@ from prompt_toolkit.styles import Style
 from src.graph.workflow import create_graph
 
 
+def serialize_snapshot(snapshot):
+    """
+    Serializes a LangGraph StateSnapshot into a JSON-compatible dictionary.
+    """
+    return {
+        "values": dumpd(snapshot.values),
+        "next": snapshot.next,
+        "config": snapshot.config,
+        "metadata": snapshot.metadata,
+    }
+
+
+def save_to_json(data, filename):
+    """
+    Saves data to a pretty-printed JSON file in the current working directory.
+    """
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    print(f"  ➜ Exported to: {filename}")
+
+
+
 async def run_interactive_cli():
     """
     Runs an interactive CLI for testing the LangGraph workflow.
@@ -19,13 +43,14 @@ async def run_interactive_cli():
     graph = create_graph()
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
+    thread_prefix = thread_id[:8]
 
     current_use_case = None
     current_sequence_diagram = None
 
     history_file = os.path.join(os.getcwd(), ".cli_history")
-    commnads = ["/exit"]
-    commands_completer = WordCompleter(commnads, ignore_case=True, sentence=True)
+    commands = ["/exit", "/save", "/save-full"]
+    commands_completer = WordCompleter(commands, ignore_case=True, sentence=True)
 
     style = Style.from_dict(
         {
@@ -78,11 +103,30 @@ async def run_interactive_cli():
             )
 
             user_input = user_input.strip()
-            if user_input in commnads:
+            
+            if not user_input:
+                continue
+
+            # Command Handling
+            if user_input == "/exit":
                 print("\nExiting. Goodbye!")
                 break
+            
+            if user_input == "/save":
+                print("\n" + "-" * 10 + " Exporting Current State " + "-" * 10)
+                state = graph.get_state(config)
+                filename = f"state_{thread_prefix}.json"
+                save_to_json(serialize_snapshot(state), filename)
+                print("-" * 40 + "\n")
+                continue
 
-            if not user_input:
+            if user_input == "/save-full":
+                print("\n" + "-" * 10 + " Exporting Full History " + "-" * 10)
+                history = list(graph.get_state_history(config))
+                filename = f"history_{thread_prefix}.json"
+                serialized_history = [serialize_snapshot(s) for s in history]
+                save_to_json(serialized_history, filename)
+                print("-" * 40 + "\n")
                 continue
 
             input_state = {"messages": [HumanMessage(content=user_input)]}
