@@ -1,9 +1,7 @@
 import asyncio
-import json
 import os
 import uuid
 
-from langchain_core.load import dumpd
 from langchain_core.messages import AIMessage, HumanMessage
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
@@ -11,29 +9,8 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 
+from cli.commands import handle_exit, handle_save, handle_save_full
 from src.graph.workflow import create_graph
-
-
-def serialize_snapshot(snapshot):
-    """
-    Serializes a LangGraph StateSnapshot into a JSON-compatible dictionary.
-    """
-    return {
-        "values": dumpd(snapshot.values),
-        "next": snapshot.next,
-        "config": snapshot.config,
-        "metadata": snapshot.metadata,
-    }
-
-
-def save_to_json(data, filename):
-    """
-    Saves data to a pretty-printed JSON file in the current working directory.
-    """
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"  ➜ Exported to: {filename}")
-
 
 
 async def run_interactive_cli():
@@ -43,13 +20,19 @@ async def run_interactive_cli():
     graph = create_graph()
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
-    thread_prefix = thread_id[:8]
 
     current_use_case = None
     current_sequence_diagram = None
 
     history_file = os.path.join(os.getcwd(), ".cli_history")
-    commands = ["/exit", "/save", "/save-full"]
+
+    commands_map = {
+        "/exit": handle_exit,
+        "/save": handle_save,
+        "/save-full": handle_save_full,
+    }
+
+    commands = list(commands_map.keys())
     commands_completer = WordCompleter(commands, ignore_case=True, sentence=True)
 
     style = Style.from_dict(
@@ -70,16 +53,10 @@ async def run_interactive_cli():
 
     def save_output():
         with open("output.md", "w", encoding="utf-8") as f:
-            f.write("# Design Lab Output\n\n")
-            f.write("## Use Case\n\n")
+            f.write("# Design Lab Output\n\n## Use Case\n\n")
             f.write(current_use_case or "Not yet generated.")
             f.write("\n\n## Sequence Diagram\n\n")
-            if current_sequence_diagram:
-                f.write("```mermaid\n")
-                f.write(current_sequence_diagram)
-                f.write("\n```\n")
-            else:
-                f.write("Not yet generated.")
+            f.write(current_sequence_diagram or "Not yet generated.")
 
     def get_toolbar():
         return HTML(
@@ -97,40 +74,28 @@ async def run_interactive_cli():
     while True:
         try:
             user_input: str = await session.prompt_async(
-                HTML("<prompt>User> </prompt>"),
+                HTML("<prompt>User > </prompt>"),
                 multiline=True,
                 bottom_toolbar=get_toolbar,
             )
 
             user_input = user_input.strip()
-            
+
             if not user_input:
                 continue
 
-            # Command Handling
-            if user_input == "/exit":
-                print("\nExiting. Goodbye!")
-                break
-            
-            if user_input == "/save":
-                print("\n" + "-" * 10 + " Exporting Current State " + "-" * 10)
-                state = graph.get_state(config)
-                filename = f"state_{thread_prefix}.json"
-                save_to_json(serialize_snapshot(state), filename)
-                print("-" * 40 + "\n")
-                continue
-
-            if user_input == "/save-full":
-                print("\n" + "-" * 10 + " Exporting Full History " + "-" * 10)
-                history = list(graph.get_state_history(config))
-                filename = f"history_{thread_prefix}.json"
-                serialized_history = [serialize_snapshot(s) for s in history]
-                save_to_json(serialized_history, filename)
-                print("-" * 40 + "\n")
-                continue
+            if user_input.startswith("/"):
+                action = commands_map.get(user_input, None)
+                if action:
+                    should_exit = await action(graph=graph, config=config)
+                    if should_exit:
+                        break
+                    continue
+                else:
+                    print(f"\033[91mUnknown command: {user_input}\033[0m")
+                    continue
 
             input_state = {"messages": [HumanMessage(content=user_input)]}
-
             print("\n" + "-" * 20 + " Workflow Execution " + "-" * 20)
 
             async for event in graph.astream(
@@ -169,10 +134,10 @@ async def run_interactive_cli():
         except KeyboardInterrupt:
             continue
         except EOFError:
-            print("\nExiting. Goodbye!")
+            handle_exit()
             break
         except Exception as e:
-            print(f"\n❌ Error ({type(e).__name__}): {e}")
+            print(f"\n❌ \033[91mError ({type(e).__name__}):\033[0m {e}")
 
 
 if __name__ == "__main__":
