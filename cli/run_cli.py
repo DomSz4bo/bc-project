@@ -137,14 +137,19 @@ async def run_interactive_cli():
         except KeyboardInterrupt:
             continue
         except EOFError:
-            handle_exit()
+            await handle_exit()
             break
         except Exception as e:
             print(f"\n❌ \033[91mError ({type(e).__name__}):\033[0m {e}")
 
 
-if __name__ == "__main__":
+def main():
+    """Synchronous entry point for the CLI"""
     try:
         asyncio.run(run_interactive_cli())
     except KeyboardInterrupt:
         pass
+
+
+if __name__ == "__main__":
+    main()
