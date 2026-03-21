@@ -12,7 +12,7 @@
 notes/*
 *.png
 *.mmd
-.cli_history
+.app_cli/
 
 ## From template
 # Byte-compiled / optimized / DLL files

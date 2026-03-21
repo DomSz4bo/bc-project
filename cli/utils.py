@@ -18,9 +18,9 @@ def serialize_snapshot(snapshot: StateSnapshot) -> dict[str, Any]:
     }
 
 
-def save_to_json(data, filename: Path | str):
+def save_to_json(data, filepath: Path | str):
     """
-    Saves data to a pretty-printed JSON file in the current working directory.
+    Saves data to a pretty-printed JSON file to the `filepath`.
     """
-    with open(filename, "w", encoding="utf-8") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
