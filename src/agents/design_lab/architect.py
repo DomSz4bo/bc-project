@@ -19,7 +19,7 @@ async def architect(state: AgentState) -> AgentState:
     if not use_case:
         raise ValueError("No use_case found in AgentState.")
 
-    messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=use_case)]
+    messages = [SystemMessage(SYSTEM_PROMPT), HumanMessage(use_case)]
 
     critic_verdict = state.get("critic_verdict", None)
     if critic_verdict is not None and critic_verdict == "FAIL":
@@ -27,22 +27,23 @@ async def architect(state: AgentState) -> AgentState:
         critic_feedback = state.get("critic_feedback")
         previous_diagram = state.get("sequence_diagram")
         messages += [
-            AIMessage(content=previous_diagram),
-            HumanMessage(content=critic_feedback),
+            AIMessage(previous_diagram),
+            HumanMessage(critic_feedback),
         ]
 
     SELF_FIX_LIMIT = 3
 
     for _ in range(SELF_FIX_LIMIT):
         response = await llm.ainvoke(messages)
-        mmd_code = extract_block(response.content, "mermaid")
+        text_response = response.text
+        mmd_code = extract_block(text_response, "mermaid")
 
         validation_result = await validate_mermaid(mmd_code)
         if validation_result.is_valid:
             break
 
         messages += [
-            AIMessage(response.content),
+            AIMessage(text_response),
             HumanMessage(
                 DIAGRAM_FIX_PROMPT.format(error=validation_result.error_message)
             ),
@@ -50,7 +51,7 @@ async def architect(state: AgentState) -> AgentState:
 
     if validation_result.is_valid:
         logger.debug("Architect completed Sequence Diagram generation.")
-        return {"sequence_diagram": response.content}
+        return {"sequence_diagram": text_response}
     else:
         raise MermaidValidationLimitExceeded(
             f"Architect failed to generate a valid Mermaid diagram in {SELF_FIX_LIMIT} tries."

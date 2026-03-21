@@ -15,22 +15,22 @@ async def analyst(state: AgentState) -> AgentState:
     if not user_intent_summary:
         raise ValueError("No user_intent_summary found in AgentState.")
 
-    system_message = SystemMessage(content=SYSTEM_PROMPT)
-    human_message = HumanMessage(
-        content=f"USER INTENT SUMMARY:\n\n{user_intent_summary}"
-    )
+    messages = [
+        SystemMessage(SYSTEM_PROMPT),
+        HumanMessage(f"USER INTENT SUMMARY:\n\n{user_intent_summary}"),
+    ]
 
-    response = await llm.ainvoke([system_message, human_message])
+    response = await llm.ainvoke(messages)
 
     logger.debug("Analyst completed Use Case generation.")
 
     return {
-        "use_case": response.content,
+        "use_case": response.text,
         # Nullify other Design Lab fields
         "sequence_diagram": None,
         "critic_verdict": None,
         "critic_feedback": None,
-        "revision_count": 0
+        "revision_count": 0,
     }
 
 
