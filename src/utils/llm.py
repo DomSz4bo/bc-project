@@ -33,6 +33,6 @@ def get_llm(
 
 default_llm = get_llm()
 gemini_2p5_flash = get_llm("gemini-2.5-flash", "google_genai")
-gemini_3_flash = get_llm("gemini-3-flash", "google_genai")
+gemini_3_flash = get_llm("gemini-3-flash-preview", "google_genai")
 gemini_2p5_flash_lite = get_llm("gemini-2.5-flash-lite", "google_genai")
 gemini_3_flash_lite = get_llm("gemini-3.1-flash-lite-preview", "google_genai")
