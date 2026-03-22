@@ -1,5 +1,6 @@
 from typing import List
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.runtime import Runtime
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -44,9 +45,14 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
 
     src_dir = working_dir / "src"
 
-    prompt = SYSTEM_PROMPT.format(use_case=use_case, sequence_diagram=sequence_diagram)
+    messages = [
+        SystemMessage(SYSTEM_PROMPT),
+        HumanMessage(
+            HUMAN_PROMPT.format(use_case=use_case, sequence_diagram=sequence_diagram)
+        ),
+    ]
 
-    plan: ScaffoldPlan = await structured_llm.ainvoke(prompt)
+    plan: ScaffoldPlan = await structured_llm.ainvoke(messages)
     logger.debug(f"Scaffolder plan: {plan}")
 
     src_dir.mkdir(parents=True, exist_ok=True)
@@ -71,13 +77,13 @@ You are the Scaffolder Agent in a software development pipeline. Your task is to
 
 ## INPUTS
 1. **Use Case**: Defines Primary Actors and Secondary Actors (External Dependencies/Mocks).
-2. **Sequence Diagram**: Shows interactions between Actors and Participants.
+2. **Sequence Diagram**: A Mermaid sequence diagram shows interactions between Actors and Participants.
 
 ---
 
 ## RULES
 1. **Identify Internal Components**: Look at the `participants` in the Sequence Diagram.
-2. **Exclude External Actors**: Do NOT scaffold Primary Actors (e.g., Customer, User) or Secondary Actors explicitly labeled as "Mock", "External", or "Dependency" in the Use Case.
+2. **Exclude External Actors**: Do NOT scaffold Primary Actors that aren't part of the system (e.g., Customer, User) or Secondary Actors explicitly labeled as "Mock", "External", or "Dependency" in the Use Case.
 3. **Focus on the "System"**: If a participant represents the system being built or its internal modules, it must be scaffolded.
 4. **Naming Conventions**:
    - `class_name`: PascalCase (e.g., VendingMachine).
@@ -87,10 +93,9 @@ You are the Scaffolder Agent in a software development pipeline. Your task is to
 
 ## OUTPUT
 Return a structured list of components, each with a `class_name` and `file_name`.
+"""
 
----
-
-## CONTEXT
+HUMAN_PROMPT = """
 **Use Case**:
 {use_case}
 
