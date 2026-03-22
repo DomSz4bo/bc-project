@@ -64,6 +64,7 @@ class InteractiveCLI:
         style = Style.from_dict(
             {
                 "prompt": "ansicyan bold",
+                "line": "ansigray",
                 "bottom-toolbar": "#6446A0 bg:ansiwhite",
                 "key": "bold",
                 "": "ansigreen",
@@ -75,7 +76,6 @@ class InteractiveCLI:
             completer=commands_completer,
             complete_while_typing=True,
             style=style,
-            mouse_support=True,
         )
 
     def _save_output(self):
@@ -93,6 +93,12 @@ class InteractiveCLI:
             "New Line: <key>[Enter]</key> | "
             "<key>[Ctrl+D]</key> to quit "
         )
+
+    def _get_prompt_continuation(self, width, line_number, is_soft_wrap):
+        """Prefix for 2nd, 3rd, etc. lines in multiline mode."""
+        if is_soft_wrap:
+            return HTML(" "*7)
+        return HTML(f"<line>{line_number: >4}   </line>")
 
     async def _handle_command(self, user_input: str) -> bool:
         """
@@ -165,6 +171,7 @@ class InteractiveCLI:
                 user_input: str = await self.session.prompt_async(
                     HTML("<prompt>User > </prompt>"),
                     multiline=True,
+                    prompt_continuation=self._get_prompt_continuation,
                     bottom_toolbar=self._get_toolbar,
                 )
 
