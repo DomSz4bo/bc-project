@@ -99,6 +99,7 @@ sequenceDiagram
 - All Mermaid Sequence Diagram features are available (`alt`, `opt`, `loop`, `par`, `note`, etc.).
 - Use whichever features most faithfully represent the Use Case logic.
 - Do not use features decoratively — every construct must be justified by the Use Case.
+- Use activation bars to show that objects are active using `activate` and `deactivate`. You can also use the shortcut notation by appending `+` or `-` suffix to a message arrow.
 
 ### Faithfulness vs. Comprehensibility
 When these two goals conflict, faithfulness wins. An accurate diagram that is slightly harder to read is preferable to a clean diagram that misrepresents the Use Case.
