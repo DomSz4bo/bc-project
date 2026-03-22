@@ -164,7 +164,8 @@ Static configuration passed at graph compile time, not modified during execution
 | Field | Type | Description |
 |---|---|---|
 | `max_revisions` | `int` | Maximum number of Critic revision cycles before the Design Lab halts and surfaces the issue to the user. |
-| `working_directory` | `str` | Root path for all filesystem operations. Shared by the Scaffolder, QA Agent, and Engineer so all three operate on the same project without runtime negotiation. |
+| `working_directory` | `Path` | Root path for all filesystem operations. Shared by the Scaffolder, QA Agent, and Engineer so all three operate on the same project without runtime negotiation. |
+| `mmd_syntax_validation_limit` | `int` | Maximum number of mermaid syntax validation cycles in the Architect node. |
 
 ---
 
@@ -180,7 +181,7 @@ bc-project/
 │   │   │   ├── analyst.py      # Requirements analyst and Use Case Specialist
 │   │   │   ├── architect.py    # Technical modeler
 │   │   │   └── critic.py       # QA for design phase
-│   │   ├── scaffolder.py      # Project scaffolding agent
+│   │   ├── scaffolder.py       # Project scaffolding agent
 │   │   ├── qa.py               # Test suite creator
 │   │   └── engineer.py         # Code generator
 │   └── graph/                  # LangGraph definitions

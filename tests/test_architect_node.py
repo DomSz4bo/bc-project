@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -26,7 +26,10 @@ async def test_architect_generation():
             "use_case": "# USE CASE: Login System\n...",
         }
 
-        result = await architect(state)
+        mock_runtime = MagicMock()
+        mock_runtime.context = {"mmd_syntax_validation_limit": 1}
+
+        result = await architect(state, mock_runtime)
 
         assert "sequence_diagram" in result
         assert result["sequence_diagram"] == mock_diagram
@@ -68,8 +71,11 @@ sequenceDiagram
             "critic_verdict": "FAIL",
             "critic_feedback": "Missing validation step.",
         }
+        
+        mock_runtime = MagicMock()
+        mock_runtime.context = {}
 
-        result = await architect(state)
+        result = await architect(state, mock_runtime)
 
         assert result["sequence_diagram"] == mock_diagram
 

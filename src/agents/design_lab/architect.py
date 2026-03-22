@@ -1,14 +1,15 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langgraph.runtime import Runtime
 from loguru import logger
 
-from src.graph.state import AgentState
-from src.utils.llm import gemini_3_flash_lite as llm
-from src.utils.mmd_validation import validate_mermaid
-from src.utils.markdown import extract_block
+from src.graph.state import AgentState, GraphContext
 from src.utils.errors import MermaidValidationLimitExceeded
+from src.utils.llm import gemini_3_flash_lite as llm
+from src.utils.markdown import extract_block
+from src.utils.mmd_validation import validate_mermaid
 
 
-async def architect(state: AgentState) -> AgentState:
+async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
     """
     The Architect node logic.
     Translates a Use Case into a Mermaid.js Sequence Diagram.
@@ -31,9 +32,12 @@ async def architect(state: AgentState) -> AgentState:
             HumanMessage(critic_feedback),
         ]
 
-    SELF_FIX_LIMIT = 3
+    FIX_LIMIT_DEFAULT = 3
+    validation_limit = runtime.context.get(
+        "mmd_syntax_validation_limit", FIX_LIMIT_DEFAULT
+    )
 
-    for _ in range(SELF_FIX_LIMIT):
+    for _ in range(validation_limit):
         response = await llm.ainvoke(messages)
         text_response = response.text
         mmd_code = extract_block(text_response, "mermaid")
@@ -54,7 +58,7 @@ async def architect(state: AgentState) -> AgentState:
         return {"sequence_diagram": text_response}
     else:
         raise MermaidValidationLimitExceeded(
-            f"Architect failed to generate a valid Mermaid diagram in {SELF_FIX_LIMIT} tries."
+            f"Architect failed to generate a valid Mermaid diagram in {validation_limit} tries."
         )
 
 

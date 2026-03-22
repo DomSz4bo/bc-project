@@ -23,3 +23,4 @@ class AgentState(TypedDict):
 class GraphContext(TypedDict):
     max_revisions: int
     working_directory: Path
+    mmd_syntax_validation_limit: int
