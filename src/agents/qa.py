@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -8,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash as llm
+from src.utils.source_context import read_source_files
 
 
 class FileChange(BaseModel):
@@ -31,7 +31,7 @@ async def quality_assurance(
     The QA Agent node logic.
     Generates a test suite and updates source code stubs based on the Use Case and Sequence Diagram.
     """
-    logger.debug("QA Agent node initiated.")
+    logger.debug("QA node initiated.")
 
     use_case = state.get("use_case", None)
     sequence_diagram = state.get("sequence_diagram", None)
@@ -42,7 +42,7 @@ async def quality_assurance(
     if not working_dir:
         raise ValueError("Missing working_directory in GraphContext.")
 
-    source_code_context = _read_source_files(working_dir)
+    source_code_context = read_source_files(working_dir)
 
     messages = [
         SystemMessage(SYSTEM_PROMPT),
@@ -68,27 +68,6 @@ async def quality_assurance(
             f.write(file_change.content)
 
     return state
-
-
-def _read_source_files(root: Path) -> str:
-    """
-    Reads all Python files in the src/ directory to provide context to the LLM.
-    Returns a formatted string.
-    """
-    src_path = root / "src"
-    if not src_path.exists():
-        return "(No source files found in src/)"
-
-    context_parts = []
-    for file_path in src_path.rglob("*.py"):
-        rel_path = file_path.relative_to(root)
-        try:
-            content = file_path.read_text(encoding="utf-8")
-            context_parts.append(f"--- File: {rel_path} ---\n{content}\n")
-        except Exception as e:
-            logger.warning(f"Failed to read {file_path}: {e}")
-
-    return "\n".join(context_parts)
 
 
 SYSTEM_PROMPT = """
