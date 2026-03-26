@@ -109,10 +109,10 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 * **Scope boundary:** The Scaffolder is responsible for structural scaffolding only — directory layout and empty class shells. It does **not** add function signatures; that responsibility belongs to the QA Agent, which derives signatures from the testing requirements. This ensures function interfaces emerge from the TDD process rather than being predicted upfront.
 * **Tools:** Filesystem access to create directories and write stub files.
 
-### 4. 📝 The QA Agent
+### 4. 📝 The TDD Lead
 
 * **Role:** TDD Lead.
-* **Inputs:** Validated Use Case + Sequence Diagram + project scaffold on disk.
+* **Inputs:** Use Case + Sequence Diagram + project scaffold on disk.
 * **Outputs:** Pytest test suite written into the project scaffold.
 * **Logic:**
     * Uses **Preconditions** from the Use Case to set up test mocks and fixtures.
@@ -126,7 +126,7 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 ### 5. 🔨 The Implementation Engineer
 
 * **Role:** Full-stack Developer.
-* **Inputs:** Validated Use Case + Sequence Diagram + project scaffold with test suite on disk.
+* **Inputs:** Use Case + Sequence Diagram + project scaffold with test suite on disk.
 * **Outputs:** Completed implementation filling all stub bodies in the project scaffold.
 * **Logic:**
     * Fills in stub implementations to satisfy the test suite.
@@ -134,6 +134,20 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
     * Uses a `run_tests` tool to execute the pytest suite and iteratively correct failures.
     * Implementation decisions — internal structure, patterns, algorithms — are the Engineer's autonomy. The scaffold and test suite define the interface and expected behaviour; they do not constrain how the Engineer satisfies them.
 * **Tools:** Filesystem access to read and edit scaffold files + `run_tests` tool to execute pytest and receive structured output.
+
+### 6. 📝 The QA Agent
+
+* **Role:** Quality assurance.
+* **Inputs:** Use Case + Sequence Diagram + project on disk.
+* **Outputs:** Additional unit tests or passing grade.
+* **Logic:**
+    * Use tool to get test coverage data.
+    * Identifies gaps in test coverage and writes additional tests.
+      * If there are no gaps then exits. Strict minimum coverage 80%, aim for 90%.
+    * Runs tests to assure that they work as expected.
+    * Routes to engineer if there are failing tests, otherwise End.
+* **Tools:** Filesystem access to read and edit test files + `run_tests_with_coverage` tool to get test results and coverage data.
+
 
 ---
 
@@ -155,7 +169,7 @@ The primary state object threaded through the entire graph.
 | `sequence_diagram` | `str \| None` | Current Mermaid Sequence Diagram produced by the Architect. |
 | `critic_verdict` | `"PASS" \| "FAIL" \| None` | Internal Design Lab signal. Not consumed by the Supervisor. |
 | `critic_feedback` | `str \| None` | Specific revision instructions from the Critic on `FAIL`, routed back to the Architect. |
-| `revision_count` | `int` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_revisions`. |
+| `revision_count` | `int  \| None` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_revisions`. |
 
 #### `GraphContext`
 
@@ -198,7 +212,6 @@ bc-project/
 ## 📝 Coding Standards
 
 ### Python & Chainlit
-* **Keys:** Use the `state["<key>"]` syntax instead of `state.get("<key>")` when possible.
 * **Async/Await:** Use `async def` for all Chainlit message handlers and LangGraph nodes to ensure non-blocking UI.
 * **Type Safety:** Use `Pydantic` models for all structured outputs.
 * **Typing**: Use the modern `type | None` syntax instead of `Optional`.

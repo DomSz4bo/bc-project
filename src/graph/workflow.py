@@ -13,6 +13,7 @@ from src.agents import (
     quality_assurance,
     supervisor,
     scaffolder,
+    tdd_lead,
 )
 from src.graph.state import AgentState, GraphContext
 
@@ -23,6 +24,7 @@ ANALYST = "Analyst"
 ARCHITECT = "Architect"
 CRITIC = "Critic"
 SCAFFOLDER = "Scaffolder"
+TDD = "TDD Lead"
 QA = "Quality assurance"
 ENGINEER = "Engineer"
 
@@ -58,8 +60,9 @@ def create_graph() -> CompiledStateGraph:
     builder.add_node(ARCHITECT, architect)
     builder.add_node(CRITIC, critic)
     builder.add_node(SCAFFOLDER, scaffolder)
-    builder.add_node(QA, quality_assurance)
+    builder.add_node(TDD, tdd_lead)
     builder.add_node(ENGINEER, engineer)
+    builder.add_node(QA, quality_assurance)
 
     builder.set_entry_point(SUPERVISOR)
     builder.add_conditional_edges(
@@ -76,9 +79,10 @@ def create_graph() -> CompiledStateGraph:
     )
 
     ## Implementation lab
-    builder.add_edge(SCAFFOLDER, QA)
-    builder.add_edge(QA, ENGINEER)
-    builder.add_edge(ENGINEER, END)
+    builder.add_edge(SCAFFOLDER, TDD)
+    builder.add_edge(TDD, ENGINEER)
+    builder.add_edge(ENGINEER, QA)
+    builder.add_edge(QA, END)
 
     # Graph compilation
     checkpointer = InMemorySaver()

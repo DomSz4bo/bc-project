@@ -3,12 +3,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agents.qa import FileChange, QAPlan, quality_assurance
+from src.agents.tdd_lead import FileChange, TDDPlan, tdd_lead
 from src.graph.state import AgentState
 
 
 @pytest.mark.asyncio
-async def test_qa_agent_logic(tmp_path):
+async def test_tdd_lead_logic(tmp_path):
     working_dir = tmp_path / "project"
     src_dir = working_dir / "src"
     src_dir.mkdir(parents=True)
@@ -29,7 +29,7 @@ async def test_qa_agent_logic(tmp_path):
     mock_runtime = MagicMock()
     mock_runtime.context = {"working_directory": working_dir}
 
-    mock_plan = QAPlan(
+    mock_plan = TDDPlan(
         files=[
             FileChange(
                 path="tests/test_vending_machine.py", content="def test_foo(): pass"
@@ -41,10 +41,10 @@ async def test_qa_agent_logic(tmp_path):
         ]
     )
 
-    with patch("src.agents.qa.structured_llm") as mock_llm:
+    with patch("src.agents.tdd_lead.structured_llm") as mock_llm:
         mock_llm.ainvoke = AsyncMock(return_value=mock_plan)
 
-        await quality_assurance(state, mock_runtime)
+        await tdd_lead(state, mock_runtime)
 
         test_file = working_dir / "tests/test_vending_machine.py"
         assert test_file.exists()
@@ -59,10 +59,10 @@ async def test_qa_agent_logic(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_qa_agent_missing_data():
+async def test_tdd_lead_missing_data():
     state: AgentState = {"use_case": None, "sequence_diagram": None, "messages": []}
     mock_runtime = MagicMock()
     mock_runtime.context = {"working_directory": Path(".")}
 
     with pytest.raises(ValueError, match="Missing use_case or sequence_diagram"):
-        await quality_assurance(state, mock_runtime)
+        await tdd_lead(state, mock_runtime)
