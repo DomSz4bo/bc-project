@@ -22,7 +22,7 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentS
 
     messages = [SystemMessage(SYSTEM_PROMPT), HumanMessage(use_case)]
 
-    critic_verdict = state.get("critic_verdict", None)
+    critic_verdict = state.get("critic_verdict")
     if critic_verdict is not None and critic_verdict == "FAIL":
         logger.debug("Architect is in FIX mode based on Critic feedback.")
         critic_feedback = state.get("critic_feedback")

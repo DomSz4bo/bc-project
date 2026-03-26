@@ -34,9 +34,9 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     """
     logger.debug("Scaffolder node initiated.")
 
-    use_case = state.get("use_case", None)
-    sequence_diagram = state.get("sequence_diagram", None)
-    working_dir = runtime.context.get("working_directory", None)
+    use_case = state.get("use_case")
+    sequence_diagram = state.get("sequence_diagram")
+    working_dir = runtime.context.get("working_directory")
 
     if not use_case or not sequence_diagram:
         raise ValueError("Missing use_case or sequence_diagram in AgentState.")
