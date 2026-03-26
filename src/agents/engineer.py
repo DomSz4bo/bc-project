@@ -1,10 +1,6 @@
-import asyncio
-
 from langchain.agents import create_agent
-from langchain.messages import HumanMessage, SystemMessage
-from langchain.tools import ToolRuntime, tool
+from langchain.messages import HumanMessage
 from langchain_mcp_adapters.tools import load_mcp_tools
-from langgraph.graph import MessagesState
 from langgraph.runtime import Runtime
 from loguru import logger
 
@@ -12,30 +8,7 @@ from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash_lite as llm
 from src.utils.mcp_clients import get_filesystem_client
 from src.utils.source_context import read_source_files
-
-
-@tool
-async def run_tests(runtime: ToolRuntime[GraphContext]) -> str:
-    """
-    Executes the pytest suite. Returns the output of the test run.
-    Use this to verify your changes.
-    """
-    process = await asyncio.create_subprocess_exec(
-        "pytest",
-        "-q",
-        "--tb=short",
-        cwd=runtime.context["working_directory"],
-        stderr=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-    )
-
-    stdout, stderr = await process.communicate()
-    result_text = stdout.decode() + stderr.decode()
-
-    if process.returncode == 0:
-        return "✅ Tests Passed"
-    else:
-        return f"❌ Tests Failed (Code {process.returncode}):\n{result_text}"
+from src.utils.tools import run_tests
 
 
 async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
@@ -58,16 +31,13 @@ async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
 
     source_code_context = read_source_files(working_dir)
 
-    messages = [
-        SystemMessage(SYSTEM_PROMPT),
-        HumanMessage(
-            HUMAN_PROMPT.format(
-                use_case=use_case,
-                sequence_diagram=sequence_diagram,
-                source_code_context=source_code_context,
-            ),
+    input_message = HumanMessage(
+        HUMAN_PROMPT.format(
+            use_case=use_case,
+            sequence_diagram=sequence_diagram,
+            source_code_context=source_code_context,
         ),
-    ]
+    )
 
     filesystem_client = get_filesystem_client(working_dir)
 
@@ -77,11 +47,11 @@ async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
 
         engineer_agent = create_agent(
             llm,
-            tools=all_tools,
-            state_schema=MessagesState,
+            all_tools,
+            system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,
         )
-        await engineer_agent.ainvoke({"messages": messages})
+        await engineer_agent.ainvoke({"messages": [input_message]})
 
     return {}
 
