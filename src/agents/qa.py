@@ -1,41 +1,28 @@
-from typing import List
-
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
+from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.runtime import Runtime
 from loguru import logger
-from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash as llm
+from src.utils.mcp_clients import get_filesystem_client
 from src.utils.source_context import read_source_files
-
-
-class FileChange(BaseModel):
-    path: str = Field(
-        description="Relative path to the file (e.g., tests/test_foo.py, src/foo.py)"
-    )
-    content: str = Field(description="The complete content of the file")
-
-
-class QAPlan(BaseModel):
-    files: List[FileChange] = Field(description="List of files to create or update")
-
-
-structured_llm = llm.with_structured_output(QAPlan)
+from src.utils.tools import run_tests_with_coverage
 
 
 async def quality_assurance(
     state: AgentState, runtime: Runtime[GraphContext]
 ) -> AgentState:
     """
-    The QA Agent node logic.
-    Generates a test suite and updates source code stubs based on the Use Case and Sequence Diagram.
+    The QA node logic.
+    Checks code coverage and writes additional unit tests.
     """
     logger.debug("QA node initiated.")
 
-    use_case = state.get("use_case", None)
-    sequence_diagram = state.get("sequence_diagram", None)
-    working_dir = runtime.context.get("working_directory", None)
+    use_case = state.get("use_case")
+    sequence_diagram = state.get("sequence_diagram")
+    working_dir = runtime.context.get("working_directory")
 
     if not use_case or not sequence_diagram:
         raise ValueError("Missing use_case or sequence_diagram in AgentState.")
@@ -44,34 +31,34 @@ async def quality_assurance(
 
     source_code_context = read_source_files(working_dir)
 
-    messages = [
-        SystemMessage(SYSTEM_PROMPT),
-        HumanMessage(
-            USER_PROMPT.format(
-                use_case=use_case,
-                sequence_diagram=sequence_diagram,
-                source_code_context=source_code_context,
-            ),
+    input_message = HumanMessage(
+        USER_PROMPT.format(
+            use_case=use_case,
+            sequence_diagram=sequence_diagram,
+            source_code_context=source_code_context,
         ),
-    ]
+    )
 
-    plan: QAPlan = await structured_llm.ainvoke(messages)
-    logger.debug(f"QA Agent plan: {len(plan.files)} files to write.")
+    filesystem_client = get_filesystem_client(working_dir)
 
-    for file_change in plan.files:
-        clean_path = file_change.path.lstrip("/\\")
-        full_path = working_dir / clean_path
+    async with filesystem_client.session("filesystem") as session:
+        file_tools = await load_mcp_tools(session)
+        all_tools = file_tools + [run_tests_with_coverage]
 
-        logger.info(f"Writing file: {full_path}")
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(full_path, "w", encoding="utf-8") as f:
-            f.write(file_change.content)
+        qa = create_agent(
+            llm,
+            tools=all_tools,
+            system_prompt=SYSTEM_PROMPT,
+            context_schema=GraphContext,
+        )
+        await qa.ainvoke({"messages": [input_message]})
 
-    return state
+    return {}
 
 
 SYSTEM_PROMPT = """
-You are the QA Agent (Quality Assurance) in a software development pipeline. Your goal is to write a comprehensive Pytest test suite and update the source code with necessary method stubs.
+You are the Quality Assurance agent in a software development pipeline.
+Your goal is to evaluate Pytest test suite and update the source code with necessary method stubs.
 
 ---
 
@@ -79,7 +66,7 @@ You are the QA Agent (Quality Assurance) in a software development pipeline. You
 You will be provided with:
 1. **Use Case**: The business requirements defining the "what".
 2. **Sequence Diagram**: The architectural logic defining the "how" (interactions).
-3. **Current Source Code**: The existing project structure (mostly empty class shells).
+3. **Current Source Code**: The current implementation.
 
 ---
 
@@ -93,27 +80,10 @@ You will be provided with:
     - **Sequence Diagram Interactions**: Verify message passing and logic flow.
 - Use `unittest.mock` or `pytest-mock` for external dependencies (Secondary Actors).
 
-### 2. Interface Definition (Stubs)
-- The current source code likely contains empty classes (e.g., `class VendingMachine: pass`).
-- You MUST update these source files to include **method stubs** for every method called in your tests.
-- **Rules for Stubs**:
-    - Add the method signature (name, arguments, type hints if possible).
-    - Body should be `pass` or `return None` (do NOT implement business logic yet).
-    - Ensure the code is syntactically correct and importable.
-    - Do not remove existing classes, just expand them.
-
----
-
-## OUTPUT FORMAT
-Return a list of `FileChange` objects.
-- `path`: The relative path to the file (e.g., `tests/test_core.py`, `src/core.py`).
-- `content`: The COMPLETE content of the file.
-
-**CRITICAL**: You must return the FULL content for both new test files and updated source files. Do not use diffs or placeholders.
 """
 
 USER_PROMPT = """
-Please generate the tests and stubs based on the following context:
+Here is the project context:
 
 **Use Case**:
 {use_case}
