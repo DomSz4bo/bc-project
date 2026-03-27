@@ -8,6 +8,7 @@ from langgraph.graph import add_messages
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     user_intent_summary: str | None
+    design_notes: str | None
     supervisor_phase: Literal["INTAKE", "APPROVAL"]
 
     # Design Lab outputs

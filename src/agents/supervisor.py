@@ -33,7 +33,7 @@ async def handoff_to_design(user_intent_summary: str, instructions: str | None) 
     Triggers the transition to the design team.
     Call this only after a requirements dialogue is complete.
     """
-    return "#!# to_design #!#"
+    return "Handoff to Design Lab failed - called with other tools."
 
 
 @tool(IMPLEMENT_HANDOFF)
@@ -42,7 +42,13 @@ async def handoff_to_implementation():
     Triggers the transition to the implementation team.
     Call this only after a successful design phase and approval from the user.
     """
-    return "#!# to_implement #!#"
+    return "Handoff to Implementation Team failed - called with other tools."
+
+
+ROUTING_TOOLS = [handoff_to_design, handoff_to_implementation]
+ACTION_TOOLS = []
+
+supervisor_tool_node = ToolNode(ROUTING_TOOLS + ACTION_TOOLS)
 
 
 async def supervisor(state: AgentState) -> AgentState:
@@ -61,10 +67,7 @@ async def supervisor(state: AgentState) -> AgentState:
             )
         )
 
-    routing_tools = [handoff_to_design, handoff_to_implementation]
-    action_tools = []
-    all_tools = action_tools + routing_tools
-
+    all_tools = ROUTING_TOOLS + ACTION_TOOLS
     llm_with_tools = llm.bind_tools(all_tools)
 
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
@@ -72,8 +75,6 @@ async def supervisor(state: AgentState) -> AgentState:
 
     return {"messages": response}
 
-
-supervisor_tool_node = ToolNode([])
 
 SYSTEM_PROMPT = """
 You are **Axiom** — a principal engineering advisor embedded in a rigorous, Visual-First software development pipeline.
@@ -104,6 +105,8 @@ You have access to specialized tools to transition between phases of the develop
 2. **`handoff_to_implementation`**:
    - **When:** Use this only when the user has explicitly APPROVED the design documents in the APPROVAL phase.
    - **Effect:** Signals the end of your turn and initiates the automated scaffolding and TDD implementation team.
+
+Do NOT combine a phase transition tool (like `handoff_to_design`) with any other action tools in the same turn. If you need to gather information first, do that in one turn, and only call the handoff tool once you have all the data you need.
 
 ---
 

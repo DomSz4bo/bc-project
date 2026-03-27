@@ -1,6 +1,7 @@
 from typing import Literal
 
 from langchain_core.globals import set_verbose
+from langchain_core.messages import ToolMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -11,9 +12,14 @@ from src.agents import (
     critic,
     engineer,
     quality_assurance,
-    supervisor,
     scaffolder,
     tdd_lead,
+)
+from src.agents.supervisor import (
+    DESIGN_HANDOFF,
+    IMPLEMENT_HANDOFF,
+    supervisor,
+    supervisor_tool_node,
 )
 from src.graph.state import AgentState, GraphContext
 
@@ -27,17 +33,78 @@ SCAFFOLDER = "Scaffolder"
 TDD = "TDD Lead"
 QA = "Quality assurance"
 ENGINEER = "Engineer"
+TOOLS = "tools"
+PREPARE_DESIGN = "PrepareDesign"
+PREPARE_IMPLEMENTATION = "PrepareImplementation"
 
 
-async def supervisor_router(state: AgentState) -> Literal["design", "implement", "end"]:
-    match state["next_step"]:
-        case "DESIGN":
-            return "design"
-        case "IMPLEMENT":
-            return "implement"
-        case "USER":
-            return "end"
-    raise ValueError(f"Unexpected next_step value: {state['next_step']}")
+async def supervisor_router(
+    state: AgentState,
+) -> Literal["design", "implement", "tools", "end"]:
+    last_message = state["messages"][-1]
+    if not last_message.tool_calls:
+        return "end"
+
+    tool_names = [tc["name"] for tc in last_message.tool_calls]
+    handoff_tools = [DESIGN_HANDOFF, IMPLEMENT_HANDOFF]
+
+    if any(name not in handoff_tools for name in tool_names):
+        return "tools"
+
+    if DESIGN_HANDOFF in tool_names:
+        return "design"
+    if IMPLEMENT_HANDOFF in tool_names:
+        return "implement"
+
+    return "end"
+
+
+async def prepare_design_node(state: AgentState) -> AgentState:
+    """
+    Extracts the user intent summary and optional instructions from the
+    handoff tool call to prepare the state for the Design Lab.
+    Adds a ToolMessage to acknowledge the call.
+    """
+    last_msg = state["messages"][-1]
+    handoff_call = next(
+        (tc for tc in last_msg.tool_calls if tc["name"] == DESIGN_HANDOFF), None
+    )
+
+    if not handoff_call:
+        return {}
+
+    return {
+        "user_intent_summary": handoff_call["args"]["user_intent_summary"],
+        "design_notes": handoff_call["args"].get("instructions"),
+        "messages": [
+            ToolMessage(
+                content="Design Lab initiated. The team is now processing the requirements.",
+                tool_call_id=handoff_call["id"],
+            )
+        ],
+    }
+
+
+async def prepare_implementation_node(state: AgentState) -> AgentState:
+    """
+    Acknowledges the implementation handoff tool call.
+    """
+    last_msg = state["messages"][-1]
+    handoff_call = next(
+        (tc for tc in last_msg.tool_calls if tc["name"] == IMPLEMENT_HANDOFF), None
+    )
+
+    if not handoff_call:
+        return {}
+
+    return {
+        "messages": [
+            ToolMessage(
+                content="Implementation phase initiated...",
+                tool_call_id=handoff_call["id"],
+            )
+        ],
+    }
 
 
 async def critic_router(state: AgentState) -> Literal["fix", "done"]:
@@ -63,22 +130,36 @@ def create_graph() -> CompiledStateGraph:
     builder.add_node(TDD, tdd_lead)
     builder.add_node(ENGINEER, engineer)
     builder.add_node(QA, quality_assurance)
+    builder.add_node(TOOLS, supervisor_tool_node)
+    builder.add_node(PREPARE_DESIGN, prepare_design_node)
+    builder.add_node(PREPARE_IMPLEMENTATION, prepare_implementation_node)
 
     builder.set_entry_point(SUPERVISOR)
+
     builder.add_conditional_edges(
         SUPERVISOR,
         supervisor_router,
-        {"design": ANALYST, "implement": SCAFFOLDER, "end": END},
+        {
+            "design": PREPARE_DESIGN,
+            "implement": PREPARE_IMPLEMENTATION,
+            "tools": TOOLS,
+            "end": END,
+        },
     )
 
-    ## Design lab
+    # Return to supervisor after tool execution
+    builder.add_edge(TOOLS, SUPERVISOR)
+
+    # Design lab
+    builder.add_edge(PREPARE_DESIGN, ANALYST)
     builder.add_edge(ANALYST, ARCHITECT)
     builder.add_edge(ARCHITECT, CRITIC)
     builder.add_conditional_edges(
         CRITIC, critic_router, {"fix": ARCHITECT, "done": SUPERVISOR}
     )
 
-    ## Implementation lab
+    # Implementation lab
+    builder.add_edge(PREPARE_IMPLEMENTATION, SCAFFOLDER)
     builder.add_edge(SCAFFOLDER, TDD)
     builder.add_edge(TDD, ENGINEER)
     builder.add_edge(ENGINEER, QA)
