@@ -4,7 +4,7 @@
 
 THIS DOCUMENT IS A WORK IN PROGRESS AND IS OPEN TO CHANGES AS THE IMPLEMENTATION IS DEVELOPED.
 
-**System Overview:** This project is a research prototype for a "Visual-First" development pipeline that transforms ambiguous human intent into verified, test-driven code. The prototype centers on a **Multi-Agent Design Lab** where requirements are iteratively refined into a "Dual-Truth" contract: a textual **Cockburn Use Case** (Intent) and a visual **Mermaid Sequence Diagram** (Logic). By enforcing this rigorous design stage, the system ensures that subsequent **Test Generation (TDD)** and **Code Implementation** are strictly grounded in validated architectural logic rather than direct, unverified LLM generation.
+**System Overview:** The project that is being developed is a research prototype for a "Visual-First" development pipeline that transforms ambiguous human intent into verified, test-driven code. The prototype centers on a **Multi-Agent Design Lab** where requirements are iteratively refined into a "Dual-Truth" contract: a textual **Cockburn Use Case** (Intent) and a visual **Mermaid Sequence Diagram** (Logic). By enforcing this rigorous design stage, the system ensures that subsequent **Test Generation (TDD)** and **Code Implementation** are strictly grounded in validated architectural logic rather than direct, unverified LLM generation.
 
 ---
 
@@ -17,26 +17,21 @@ THIS DOCUMENT IS A WORK IN PROGRESS AND IS OPEN TO CHANGES AS THE IMPLEMENTATION
 * **LLM Framework:** [LangChain](https://python.langchain.com/).
 * **Diagram Visualization:** [Mermaid.js](https://mermaid.js.org/intro/).
 
-### Environment Management
-* **Manager:** Conda.
-* **Definition:** `environment.yaml`.
-* **Key Libs:** `chainlit`, `langgraph`, `langchain`.
-
 ---
 
 ## 🔄 The AI Development Pipeline
 
 1. **Intake:** User discusses the goal with the Supervisor.
 2. **Design Lab:**
-    * **Analyst:** Drafts the "Fully Dressed" Use Case.
+    * **Analyst:** Creates the Cockburn Use Case.
     * **Architect:** Maps the Use Case to a Mermaid Sequence Diagram.
     * **Critic:** Treats the Use Case as ground truth and audits the Diagram for faithful representation.
-    * *Loop:* On FAIL, the Critic routes the Diagram back to the Architect with specific revision instructions. The Analyst is not involved in this loop.
-3. **Approval:** User reviews the synchronized Use Case and Diagram.
+3. **Approval:** User reviews the synchronized Use Case and Diagram. Requests modifications or approves.
 4. **Implementation:**
-   * **Scaffolding:** `Scaffolder Agent` parses the Sequence Diagram, creates the project directory structure, and writes empty class shells as stub files.
-   * **Test Generation:** `QA Agent` writes tests covering the full Use Case — Main Success Scenario, Extensions, and Sequence Diagram interactions — adding function stubs to the scaffold as needed.
-   * **Code Generation:** `Engineer Agent` fills in the stub implementations to satisfy the test suite, using a `run_tests` tool to iteratively verify correctness.
+   * **Scaffolding:** Parses the Use Case and Sequence Diagram, creates the project directory structure, and writes empty class shells as stub files.
+   * **Test Generation (TDD):** Writes tests covering the full Use Case — Main Success Scenario, Extensions, and Sequence Diagram interactions — adding function stubs to the scaffold as needed.
+   * **Code Generation:** `Engineer` fills in the stub implementations to satisfy the test suite, using a `run_tests` tool to iteratively verify correctness.
+   * **Test coverage:** `QA` verifies test code coverage and writes additional unit test if necessary.
 
 ---
 
@@ -46,148 +41,70 @@ The system uses the [subagents architecture](https://docs.langchain.com/oss/pyth
 
 ### 1. The Supervisor
 
-* **Role:** Central orchestrator and user-facing conversational agent.
-* **Responsibility:** Manages the top-level state machine, conducts the requirements intake conversation, and routes between the Design Lab and Implementation teams based on gate conditions.
-* **Intake Behavior:**
-    * Engages the user in a structured dialogue to elicit a precise, unambiguous description of the desired goal.
-    * Proactively offers suggestions, asks clarifying questions, and surfaces edge cases the user may not have considered.
-    * Produces a **User Intent Summary** once the goal is internally consistent and sufficiently detailed — this summary is the sole input passed to the Design Lab.
-* **Post-Design Behavior:**
-    * Presents the validated Use Case and Sequence Diagram to the user for approval.
-    * On `MODIFICATION`: synthesizes user feedback into an updated User Intent Summary and re-initiates the Design Lab from the Analyst.
-    * On `APPROVED`: hands off the validated design to the QA Agent.
-* **Transition Logic (Supervisor-owned gates only):**
-
-| Condition | Next step |
-|---|---|
-| Intent Summary ready | `DESIGN` |
-| `supervisor_phase == APPROVAL` | User (approval step) |
-| User `MODIFICATION` | `DESIGN` (with revised intent) |
-| User `APPROVED` | `IMPLEMENT` |
-
-* **Phase Management:**
-    * The Supervisor operates in two distinct phases, controlled by the `supervisor_phase` field in graph state.
-    * `INTAKE`: Default phase. The Supervisor conducts the requirements conversation and produces the User Intent Summary.
-    * `APPROVAL`: Entered when the Design Lab sets `supervisor_phase = APPROVAL` in graph state upon a Critic `PASS`. The Supervisor's system prompt is conditionally reconstructed to include the current Use Case and Sequence Diagram as read-only context, enabling it to present the design to the user and synthesize modification feedback accurately.
-
-> `DESIGN` represents a transition to the Design Lab workflow (Analyst -> Architect <-> Critic). \
-`IMPLEMENT` represents a transition to the Implementation pipeline (Scaffolder -> QA -> Engineer)
+* **Role:** Central orchestrator and user-facing conversational **agent**.
+* **Responsibilities:**
+  * talks to the user, helps the user clarify their goals and intent
+  * initiates sub-agents based on the conversation
 
 
 ### 2. 🧪 The Design Lab
+* a sub-agent of the system (name TBD), which is actually a sub-graph consisting of three nodes:
 
 #### A. The Requirements Analyst
 
 * **Role:** Translates user intent into structured business logic.
 * **Responsibility:** Generates the **Cockburn "Sea-Level" Use Case**.
-* **Focus:** Primary/Secondary Actors, Pre/Post-conditions, and the numbered Main Success Scenario.
 
 #### B. The System Architect
 
 * **Role:** Technical modeler.
 * **Responsibility:** Translates the Analyst's Use Case into **Mermaid.js Sequence Diagram** syntax.
-* **Focus:** Participant lifecycle, message direction, and `alt`/`opt` logic blocks.
-* **Tools:** Calls a Mermaid validation tool to confirm the diagram is syntactically correct and renderable before passing it to the Critic.
+* Mermaid sequence diagram syntax validation runs in a cycle until a correct diagram is created.
 
 #### C. The Design Critic
 
 * **Role:** Diagram auditor. The Use Case is treated as the validated ground truth and is not subject to critique.
-* **Responsibility:** Verifies that the Sequence Diagram faithfully and completely represents the Use Case. The original User Intent Summary is not consulted — the Critic's sole reference frame is the Use Case as written.
-* **Output:** `PASS` (proceed) or `FAIL` (with specific revision instructions routed exclusively to the Architect). And `LIMIT` in case `max_revisions` number of cycles has been reached.
+* **Responsibility:** Verifies that the Sequence Diagram faithfully and completely represents the Use Case.
 
 
-### 3. The Interface Scaffolder
+### 3. The Implementation Team
+
+#### A. The Interface Scaffolder
 
 * **Role:** Project scaffolding agent. First step of the Implementation pipeline.
-* **Inputs:** Validated Use Case + Sequence Diagram.
-* **Responsibility:** Translates the Sequence Diagram's structural information into a concrete project scaffold on disk. Provides a shared naming reference that both the QA Agent and Engineer operate against, eliminating ambiguity about class and module names.
-* **Logic:**
-    * Parses Sequence Diagram **participants** → derives class names and module layout.
-    * Parses **solid arrows** (messages) → derives method names.
-    * Creates the project directory structure under `GraphContext.working_directory`.
-    * Writes one stub file per system component containing empty class shells — no method signatures, no implementation bodies.
-* **Scope boundary:** The Scaffolder is responsible for structural scaffolding only — directory layout and empty class shells. It does **not** add function signatures; that responsibility belongs to the QA Agent, which derives signatures from the testing requirements. This ensures function interfaces emerge from the TDD process rather than being predicted upfront.
-* **Tools:** Filesystem access to create directories and write stub files.
+* **Responsibility:** Translates the Sequence Diagram's structural information into a concrete project scaffold on disk. Provides a shared naming reference that both the TDD Lead and Engineer operate against, eliminating ambiguity about class and module names.
 
-### 4. 📝 The TDD Lead
+#### B. 📝 The TDD Lead
 
 * **Role:** TDD Lead.
-* **Inputs:** Use Case + Sequence Diagram + project scaffold on disk.
-* **Outputs:** Pytest test suite written into the project scaffold.
-* **Logic:**
-    * Uses **Preconditions** from the Use Case to set up test mocks and fixtures.
-    * Tests the **Main Success Scenario** step-by-step to verify the happy path executes correctly.
-    * Uses **Extensions** from the Use Case to define failure-case test functions.
-    * Derives interaction-level tests from the **Sequence Diagram** — verifying message ordering, participant interactions, and `alt`/`opt` conditional branches.
-    * Must verify **Success End Conditions** in assertions.
-    * Adds function stubs to the scaffold files as needed while writing tests — function signatures emerge from testing requirements, not from prior prediction.
-* **Language/Framework:** Python + pytest. Tests follow pytest conventions (`conftest.py` for fixtures, `test_*.py` naming).
+* **Responsibilit:** Create a test suite based on the system design (Use Case and Sequence Diagram) for the Engineer to implement against. 
+* **Language/Framework:** Python + pytest. Tests follow pytest conventions.
 
-### 5. 🔨 The Implementation Engineer
+#### C. 🔨 The Implementation Engineer
 
-* **Role:** Full-stack Developer.
-* **Inputs:** Use Case + Sequence Diagram + project scaffold with test suite on disk.
-* **Outputs:** Completed implementation filling all stub bodies in the project scaffold.
-* **Logic:**
-    * Fills in stub implementations to satisfy the test suite.
-    * Adheres to the Sequence Diagram interaction flow when implementing method bodies.
-    * Uses a `run_tests` tool to execute the pytest suite and iteratively correct failures.
-    * Implementation decisions — internal structure, patterns, algorithms — are the Engineer's autonomy. The scaffold and test suite define the interface and expected behaviour; they do not constrain how the Engineer satisfies them.
+* **Role:** Full-stack Developer **agent**.
+* **Responsibility:** Write the implementation of the designed system and use tests to verify the implementation.
 * **Tools:** Filesystem access to read and edit scaffold files + `run_tests` tool to execute pytest and receive structured output.
 
-### 6. 📝 The QA Agent
+### D. 📝 The QA
 
-* **Role:** Quality assurance.
-* **Inputs:** Use Case + Sequence Diagram + project on disk.
-* **Outputs:** Additional unit tests or passing grade.
-* **Logic:**
-    * Use tool to get test coverage data.
-    * Identifies gaps in test coverage and writes additional tests.
-      * If there are no gaps then exits. Strict minimum coverage 80%, aim for 90%.
-    * Runs tests to assure that they work as expected.
-    * Routes to engineer if there are failing tests, otherwise End.
+* **Role:** Quality assurance **agent**.
+* **Responsibility:** Check test coverage and write additional unit tests if the coverage is not satisfactory.
 * **Tools:** Filesystem access to read and edit test files + `run_tests_with_coverage` tool to get test results and coverage data.
 
 
 ---
 
-## 💾 Graph State Schema
-
-Defined in `src/graph/state.py`. All agents read from and write to this shared state.
-
-#### `AgentState`
-
-The primary state object threaded through the entire graph.
-
-| Field | Type | Description |
-|---|---|---|
-| `messages` | `list[AnyMessage]` | Full conversation history, managed via LangGraph's `add_messages` reducer. |
-| `next_step` | `"DESIGN" \| "IMPLEMENT" \| "USER" \| None` | Supervisor-owned routing signal. |
-| `user_intent_summary` | `str \| None` | Structured User Intent Summary produced by the Supervisor, passed as the sole input to the Design Lab. |
-| `supervisor_phase` | `"INTAKE" \| "APPROVAL"` | Controls Supervisor behavior and prompt construction. Defaults to `INTAKE`; set to `APPROVAL` by the Design Lab. |
-| `use_case` | `str \| None` | Current Cockburn Use Case produced by the Analyst. |
-| `sequence_diagram` | `str \| None` | Current Mermaid Sequence Diagram produced by the Architect. |
-| `critic_verdict` | `"PASS" \| "FAIL" \| None` | Internal Design Lab signal. Not consumed by the Supervisor. |
-| `critic_feedback` | `str \| None` | Specific revision instructions from the Critic on `FAIL`, routed back to the Architect. |
-| `revision_count` | `int  \| None` | Tracks Design Lab revision cycles. Guards against infinite Critic loops; compared against `GraphContext.max_revisions`. |
-
-#### `GraphContext`
-
-Static configuration passed at graph compile time, not modified during execution.
-
-| Field | Type | Description |
-|---|---|---|
-| `max_revisions` | `int` | Maximum number of Critic revision cycles before the Design Lab halts and surfaces the issue to the user. |
-| `working_directory` | `Path` | Root path for all filesystem operations. Shared by the Scaffolder, QA Agent, and Engineer so all three operate on the same project without runtime negotiation. |
-| `mmd_syntax_validation_limit` | `int` | Maximum number of mermaid syntax validation cycles in the Architect node. |
-
----
 
 ## 📂 Project Structure
 ```text
 bc-project/
 ├── .chainlit/                  # Chainlit configuration and translations
 ├── public/                     # Static assets for Chainlit
+├── cli/
+    ├── commands.py             # CLI command handlers
+    ├── run_cli.py              # CLI entry point
+    └── utils.py                # CLI utility functions
 ├── src/
 │   ├── agents/                 # Node definitions for each agent
 │   │   ├── supervisor.py       # Central orchestrator
@@ -196,14 +113,16 @@ bc-project/
 │   │   │   ├── architect.py    # Technical modeler
 │   │   │   └── critic.py       # QA for design phase
 │   │   ├── scaffolder.py       # Project scaffolding agent
-│   │   ├── qa.py               # Test suite creator
+│   │   ├── tdd_lead.py         # TDD test suite creator
 │   │   └── engineer.py         # Code generator
-│   └── graph/                  # LangGraph definitions
-│       ├── state.py            # Graph state schema
-│       └── workflow.py         # Graph construction and compilation
+│   │   ├── qa.py               # Test coverage enforcer
+│   ├── graph/                  # LangGraph definitions
+│   │   ├── state.py            # Graph state schema
+│   │   └── workflow.py         # Graph construction and compilation
+│   └── utils/                  # utility modules used in nodes
+├── tests/                      # test suite
 ├── app.py                      # Chainlit UI and message handlers
 ├── chainlit.md                 # UI welcome screen content
-├── environment.yaml            # Conda environment
 └── AGENTS.md                   # Project reference
 ```
 
@@ -225,14 +144,3 @@ bc-project/
           John-->>-Alice: Hi Alice, I can hear you!
           John-->>-Alice: I feel great!!
         ```
-* **Supervisor Prompt Construction:**
-    * Build the Supervisor's system prompt conditionally based on `supervisor_phase` from graph state.
-    * In `APPROVAL` phase, append the current design as a read-only block:
-    ```
-        [CURRENT DESIGN]
-        Use Case:
-        {use_case}
-
-        Sequence Diagram:
-        {sequence_diagram}
-    ```
