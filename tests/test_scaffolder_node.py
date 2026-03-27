@@ -29,7 +29,6 @@ sequenceDiagram
     System->>External API: Call
 ```""",
         "messages": [],
-        "next_step": "IMPLEMENT",
         "user_intent_summary": "Test",
         "supervisor_phase": "APPROVAL",
         "critic_verdict": "PASS",
@@ -64,7 +63,6 @@ async def test_scaffolder_none_data():
         "use_case": None,
         "sequence_diagram": None,
         "messages": [],
-        "next_step": "IMPLEMENT",
         "user_intent_summary": "Test",
         "supervisor_phase": "APPROVAL",
         "critic_verdict": "PASS",

@@ -136,8 +136,6 @@ class InteractiveCLI:
         """Processes and prints updates from a single workflow node."""
         print(f"[{node_name}] running...")
 
-        if "next_step" in updates:
-            print(f"  ➜ next_step: {updates['next_step']}")
         if "supervisor_phase" in updates:
             print(f"  ➜ phase: {updates['supervisor_phase']}")
         if "critic_verdict" in updates:

@@ -19,7 +19,6 @@ async def test_tdd_lead_logic(tmp_path):
         "use_case": "Use Case Content",
         "sequence_diagram": "Sequence Diagram Content",
         "messages": [],
-        "next_step": "IMPLEMENT",
         "user_intent_summary": "Test",
         "supervisor_phase": "APPROVAL",
         "critic_verdict": "PASS",

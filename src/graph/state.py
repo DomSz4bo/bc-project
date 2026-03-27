@@ -7,7 +7,6 @@ from langgraph.graph import add_messages
 
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
-    next_step: Literal["DESIGN", "IMPLEMENT", "USER"] | None
     user_intent_summary: str | None
     supervisor_phase: Literal["INTAKE", "APPROVAL"]
 
