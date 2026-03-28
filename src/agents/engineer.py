@@ -6,9 +6,8 @@ from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash_lite as llm
-from src.utils.mcp_clients import get_filesystem_client
-from src.utils.source_context import read_source_files
-from src.utils.tools import run_tests
+from src.utils.source_context import extract_project_context
+from src.utils.tools import get_mcp_client, run_tests
 
 
 async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
@@ -18,28 +17,24 @@ async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
     """
     logger.debug("Engineer node initiated.")
 
-    use_case = state.get("use_case")
-    sequence_diagram = state.get("sequence_diagram")
-    working_dir = runtime.context.get("working_directory")
+    context = extract_project_context(state, runtime.context.get("working_directory"))
 
-    if not use_case:
-        raise ValueError("No use_case found in AgentState.")
-    if not sequence_diagram:
-        raise ValueError("No sequence_diagram found in AgentState.")
-    if not working_dir:
-        raise ValueError("Missing working_directory in GraphContext.")
+    qa_feedback = state.get("qa_feedback")
 
-    source_code_context = read_source_files(working_dir)
+    human_prompt = HUMAN_PROMPT
+    if qa_feedback:
+        human_prompt += f"\n\n### Quality Assurance FEEDBACK\n:{qa_feedback}"
 
     input_message = HumanMessage(
-        HUMAN_PROMPT.format(
-            use_case=use_case,
-            sequence_diagram=sequence_diagram,
-            source_code_context=source_code_context,
+        human_prompt.format(
+            use_case=context.use_case,
+            sequence_diagram=context.sequence_diagram,
+            source_code_context=context.source_code_context,
+            tests_context=context.test_files_context,
         ),
     )
 
-    filesystem_client = get_filesystem_client(working_dir)
+    filesystem_client = get_mcp_client()
 
     async with filesystem_client.session("filesystem") as session:
         file_tools = await load_mcp_tools(session)
@@ -74,6 +69,9 @@ Here is the system design:
 {sequence_diagram}
 </sequence_diagrma>
 
-And here are the current contents of the project files:
+Here are the current contents of the project files:
 {source_code_context}
+
+The tests that the implementation needs to fufill.
+{tests_context}
 """

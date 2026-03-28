@@ -1,14 +1,37 @@
-from langchain.agents import create_agent
-from langchain_core.messages import HumanMessage
-from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.tools import tool
+from langgraph.prebuilt import ToolNode
 from langgraph.runtime import Runtime
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash as llm
-from src.utils.mcp_clients import get_filesystem_client
-from src.utils.source_context import read_source_files
-from src.utils.tools import run_tests_with_coverage
+from src.utils.source_context import extract_project_context
+from src.utils.tools import file_tools, run_tests_with_coverage
+
+REJECT_IMPLEMENTATION = "reject_implementation"
+
+
+class ImplementationFeedback(BaseModel):
+    feedback: str = Field(
+        description=("Detailed feedback about what tests are failingaand other issues ")
+    )
+
+
+@tool(REJECT_IMPLEMENTATION, args_schema=ImplementationFeedback)
+async def reject_implementation(feedback: str) -> str:
+    """
+    Signals that the current implementation is inadequate and must be fixed by the Engineer.
+    Call this when unit tests fail or there are significant code quality issues.
+     Provide detailed feedback on what needs fixing.
+    """
+    return "Handoff to Engineer failed - called with other tools."
+
+
+routing_tools = [reject_implementation]
+action_tools = [run_tests_with_coverage]
+all_tools = file_tools + routing_tools + action_tools
 
 
 async def quality_assurance(
@@ -16,81 +39,100 @@ async def quality_assurance(
 ) -> AgentState:
     """
     The QA node logic.
-    Checks code coverage and writes additional unit tests.
+    Identifies issues in the implementation and either rejects it (via tool) or finishes.
     """
     logger.debug("QA node initiated.")
 
-    use_case = state.get("use_case")
-    sequence_diagram = state.get("sequence_diagram")
-    working_dir = runtime.context.get("working_directory")
+    if state["qa_messages"]:
+        messages = state["qa_messages"]
+    else:
+        working_dir = runtime.context.get("working_directory")
+        project_context = extract_project_context(state, working_dir)
+        messages = [
+            SystemMessage(SYSTEM_PROMPT),
+            HumanMessage(
+                USER_PROMPT.format(
+                    use_case=project_context.use_case,
+                    sequence_diagram=project_context.sequence_diagram,
+                    source_code_context=project_context.source_code_context,
+                    tests_context=project_context.test_files_context,
+                ),
+            ),
+        ]
 
-    if not use_case or not sequence_diagram:
-        raise ValueError("Missing use_case or sequence_diagram in AgentState.")
-    if not working_dir:
-        raise ValueError("Missing working_directory in GraphContext.")
+    llm_with_tools = llm.bind_tools(all_tools)
+    response = await llm_with_tools.ainvoke(messages)
 
-    source_code_context = read_source_files(working_dir)
+    return {"qa_messages": messages + [response]}
 
-    input_message = HumanMessage(
-        USER_PROMPT.format(
-            use_case=use_case,
-            sequence_diagram=sequence_diagram,
-            source_code_context=source_code_context,
-        ),
-    )
 
-    filesystem_client = get_filesystem_client(working_dir)
+async def qa_tool_node(state: AgentState) -> AgentState:
+    """
+    Wraps a ToolNode to achieve custom state update behaviour.
+    Executes the QA's tool calls.
+    """
+    qa_messages = state.get("qa_messages")
+    if not qa_messages:
+        raise ValueError("There are no qa_messages")
 
-    async with filesystem_client.session("filesystem") as session:
-        file_tools = await load_mcp_tools(session)
-        all_tools = file_tools + [run_tests_with_coverage]
+    tool_node = ToolNode(all_tools)
+    response: list[ToolMessage] = await tool_node.ainvoke(qa_messages)
 
-        qa = create_agent(
-            llm,
-            tools=all_tools,
-            system_prompt=SYSTEM_PROMPT,
-            context_schema=GraphContext,
-        )
-        await qa.ainvoke({"messages": [input_message]})
+    if not isinstance(response[0], ToolMessage):
+        raise ValueError("Unexpected value in QA agent")
 
-    return {}
+    return {"qa_messages": qa_messages + response}
 
 
 SYSTEM_PROMPT = """
-You are the Quality Assurance agent in a software development pipeline.
-Your goal is to evaluate Pytest test suite and update the source code with necessary method stubs.
+You are the **Quality Assurance** agent. Your job is to verify that the implementation is complete, correct, and fully tested.
 
 ---
 
-## INPUTS
-You will be provided with:
-1. **Use Case**: The business requirements defining the "what".
-2. **Sequence Diagram**: The architectural logic defining the "how" (interactions).
-3. **Current Source Code**: The current implementation.
+## YOUR MANDATE
+1. **Audit for correctness**: Does the source code accurately implement the requirements from the Use Case and Sequence Diagram?
+2. **Audit for test coverage**: Are all branches of the logic, including extensions and error states, covered by unit tests?
+3. **Verify via execution**: Use the `run_tests_with_coverage` tool to get definitive proof.
 
 ---
 
-## RESPONSIBILITIES
+## TOOL USAGE
+- **Writing Tests**: You have access to filesystem tools. Use them to create or update files in the `tests/` directory to ensure full coverage.
+- **Verification**: Always run `run_tests_with_coverage` after making changes or to verify the Engineer's work.
+- **Rejection**: If tests fail or coverage is low and you cannot fix it yourself, call `reject_implementation(feedback)`.
 
-### 1. Test Generation (TDD)
-- Write `tests/conftest.py` for fixtures derived from **Preconditions** and **Actors**.
-- Write `tests/test_*.py` files to cover:
-    - **Main Success Scenario**: Verify the happy path.
-    - **Extensions**: Verify edge cases and failure modes.
-    - **Sequence Diagram Interactions**: Verify message passing and logic flow.
-- Use `unittest.mock` or `pytest-mock` for external dependencies (Secondary Actors).
+---
 
+## WHEN TO REJECT
+If you find failing tests or clear logical deviations that require implementation changes, use the `reject_implementation` tool.
+- **Provide detailed feedback**: Be surgical. Reference specific lines or missing coverage metrics.
+
+---
+
+## WHEN TO FINISH
+If all tests pass, coverage is high (e.g., >85%), and the implementation is faithful to the design, simply finish your turn with a brief summary. **Do NOT call `reject_implementation` if everything is correct.**
 """
 
 USER_PROMPT = """
-Here is the project context:
+Here is the project context for your audit:
 
 **Use Case**:
+<use_case>
 {use_case}
+</use_case>
 
 **Sequence Diagram**:
+<sequence_diagram>
 {sequence_diagram}
+</sequence_diagram>
 
 **Current Source Code**:
+<source_code>
 {source_code_context}
+</source_code>
+
+**Current tests**:
+<tests>
+{tests_context}
+</tests>
 """

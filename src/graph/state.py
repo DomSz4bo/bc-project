@@ -19,6 +19,11 @@ class AgentState(TypedDict):
     critic_feedback: str | None
     revision_count: int
 
+    # QA validation
+    qa_messages: list[AnyMessage] | None
+    qa_feedback: str | None
+    qa_revision_count: int
+
 
 class GraphContext(TypedDict):
     max_revisions: int

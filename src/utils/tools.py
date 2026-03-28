@@ -1,11 +1,34 @@
 import asyncio
 import locale
 import sys
+from pathlib import Path
 
 from langchain.tools import ToolRuntime, tool
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from src.graph.state import GraphContext
 
+_client = None
+
+def get_mcp_client():
+    global _client
+    if not _client:
+        _client = MultiServerMCPClient(
+            {
+                "filesystem": {
+                    "transport": "stdio",
+                    "command": "npx",
+                    "args": [
+                        "-y",
+                        "@modelcontextprotocol/server-filesystem",
+                        str(Path.cwd()),
+                    ],
+                }
+            }
+        )
+    return _client
+
+file_tools = asyncio.run(get_mcp_client().get_tools("filesystem"))
 
 @tool
 async def run_tests(runtime: ToolRuntime[GraphContext]) -> str:
