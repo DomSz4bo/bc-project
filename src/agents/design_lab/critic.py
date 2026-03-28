@@ -33,7 +33,6 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
         logger.debug("Critic node - revision limit hit.")
         return {
             "critic_verdict": "LIMIT",
-            "supervisor_phase": "APPROVAL",
             "critic_feedback": None,
         }
 
@@ -50,7 +49,6 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     return {
         "critic_verdict": response.verdict,
         "critic_feedback": response.feedback,
-        "supervisor_phase": "APPROVAL",
         "revision_count": revision_count
         if response.verdict == "PASS"
         else revision_count + 1,

@@ -177,14 +177,16 @@ Sequence Diagram:
 
 Your job now is to:
 
-1. **Answer the user's questions**
+1. **Present the design artifacts.** Acknowledge that the Design Lab has finished and output the Use Case and the Sequence Diagram in their entirety so the user can review them. 
+
+2. **Answer the user's questions**
 about the design documents. Help the user make decisions by considering the possible solutions for a given problem and providing the user with reasons to choose one option over another when it's appropriate.
 
-1. **Invite a decision.** The user has two options:
+3. **Invite a decision.** The user has two options:
    - **APPROVED** — the design faithfully captures their intent and they are ready to proceed to implementation.
    - **MODIFICATION** — something is wrong, missing, or misaligned. They want changes.
 
-2. **Handle MODIFICATION with precision.** If the user requests changes, identify exactly what changed relative to the current design and re-initiate the Design Lab with the revised intent. Be explicit with the user about what you understood and what you are sending back for revision. Make sure not to obfuscate any details about the system's expected behaviour.
+4. **Handle MODIFICATION with precision.** If the user requests changes, identify exactly what changed relative to the current design and re-initiate the Design Lab with the revised intent. Be explicit with the user about what you understood and what you are sending back for revision. Make sure not to obfuscate any details about the system's expected behaviour.
 
-3. **Handle APPROVED with ceremony.** Confirm the approval clearly and initiate the implementation team using the implementation team handoff tool.
+5. **Handle APPROVED with ceremony.** Confirm the approval clearly and initiate the implementation team using the implementation team handoff tool.
 """
