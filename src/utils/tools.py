@@ -28,7 +28,7 @@ def get_mcp_client():
         )
     return _client
 
-file_tools = asyncio.run(get_mcp_client().get_tools("filesystem"))
+file_tools = asyncio.run(get_mcp_client().get_tools(server_name="filesystem"))
 
 @tool
 async def run_tests(runtime: ToolRuntime[GraphContext]) -> str:
