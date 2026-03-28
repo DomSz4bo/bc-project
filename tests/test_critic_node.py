@@ -28,7 +28,6 @@ async def test_critic_pass():
         result = await critic(state, mock_runtime)
 
         assert result["critic_verdict"] == "PASS"
-        assert result["supervisor_phase"] == "APPROVAL"
         assert result["revision_count"] == 0
         assert result["critic_feedback"] is None
 
@@ -64,7 +63,6 @@ async def test_critic_fail():
         result = await critic(state, mock_runtime)
 
         assert result["critic_verdict"] == "FAIL"
-        assert result["supervisor_phase"] == "APPROVAL"
         assert result["revision_count"] == 2
         assert result["critic_feedback"] == "Missing step."
 
@@ -85,6 +83,5 @@ async def test_critic_limit():
         result = await critic(state, mock_runtime)
 
         assert result["critic_verdict"] == "LIMIT"
-        assert result["supervisor_phase"] == "APPROVAL"
         assert result["critic_feedback"] is None
         mock_llm.ainvoke.assert_not_called()

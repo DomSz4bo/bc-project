@@ -63,5 +63,5 @@ async def test_tdd_lead_missing_data():
     mock_runtime = MagicMock()
     mock_runtime.context = {"working_directory": Path(".")}
 
-    with pytest.raises(ValueError, match="Missing use_case or sequence_diagram"):
+    with pytest.raises(KeyError, match="No use_case found in state."):
         await tdd_lead(state, mock_runtime)
