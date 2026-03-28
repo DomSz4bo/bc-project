@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash as llm
-from src.utils.source_context import read_source_files
+from src.utils.source_context import extract_project_context
 
 
 class FileChange(BaseModel):
@@ -33,24 +33,16 @@ async def tdd_lead(
     """
     logger.debug("TDD Lead initiated.")
 
-    use_case = state.get("use_case")
-    sequence_diagram = state.get("sequence_diagram")
     working_dir = runtime.context.get("working_directory")
-
-    if not use_case or not sequence_diagram:
-        raise ValueError("Missing use_case or sequence_diagram in AgentState.")
-    if not working_dir:
-        raise ValueError("Missing working_directory in GraphContext.")
-
-    source_code_context = read_source_files(working_dir)
+    project_context = extract_project_context(state, working_dir)
 
     messages = [
         SystemMessage(SYSTEM_PROMPT),
         HumanMessage(
             USER_PROMPT.format(
-                use_case=use_case,
-                sequence_diagram=sequence_diagram,
-                source_code_context=source_code_context,
+                use_case=project_context.use_case,
+                sequence_diagram=project_context.sequence_diagram,
+                source_code_context=project_context.source_code_context,
             ),
         ),
     ]
