@@ -11,10 +11,10 @@ from src.agents import (
     architect,
     critic,
     engineer,
-    quality_assurance,
     scaffolder,
     tdd_lead,
 )
+from src.agents.qa import quality_assurance, REJECT_IMPLEMENTATION, qa_tool_node
 from src.agents.supervisor import (
     DESIGN_HANDOFF,
     IMPLEMENT_HANDOFF,
@@ -34,8 +34,10 @@ TDD = "TDD Lead"
 QA = "Quality assurance"
 ENGINEER = "Engineer"
 TOOLS = "tools"
+QA_TOOLS = "qa_tools"
 PREPARE_DESIGN = "PrepareDesign"
 PREPARE_IMPLEMENTATION = "PrepareImplementation"
+PREPARE_FIX = "PrepareFix"
 
 
 async def supervisor_router(
@@ -57,6 +59,21 @@ async def supervisor_router(
         return "implement"
 
     return "end"
+
+
+async def qa_router(
+    state: AgentState,
+) -> Literal["fix", "tools", "done"]:
+    last_message = state["messages"][-1]
+    if not last_message.tool_calls:
+        return "done"
+
+    tool_names = [tc["name"] for tc in last_message.tool_calls]
+
+    if any(name != REJECT_IMPLEMENTATION for name in tool_names):
+        return "tools"
+
+    return "fix"
 
 
 async def prepare_design_node(state: AgentState) -> AgentState:
@@ -82,6 +99,10 @@ async def prepare_design_node(state: AgentState) -> AgentState:
                 tool_call_id=handoff_call["id"],
             )
         ],
+        "sequence_diagram": None,
+        "critic_verdict": None,
+        "critic_feedback": None,
+        "revision_count": 0,
     }
 
 
@@ -104,6 +125,29 @@ async def prepare_implementation_node(state: AgentState) -> AgentState:
                 tool_call_id=handoff_call["id"],
             )
         ],
+        "qa_revision_count": 0,
+        "qa_feedback": None,
+        "qa_messages": None
+    }
+
+
+async def prepare_fix_node(state: AgentState) -> AgentState:
+    """
+    Extracts feedback from the rejection tool call and 
+    deletes the QA agent message history.
+    """
+    last_msg = state["messages"][-1]
+    reject_call = next(
+        (tc for tc in last_msg.tool_calls if tc["name"] == REJECT_IMPLEMENTATION), None
+    )
+
+    if not reject_call:
+        raise RuntimeError("No feedback tool call found: QA --!-> Engineer.")
+
+    return {
+        "qa_feedback": reject_call["args"]["feedback"],
+        "qa_revision_count": state.get("qa_revision_count", 0) + 1,
+        "qa_messages": None
     }
 
 
@@ -131,11 +175,12 @@ def create_graph() -> CompiledStateGraph:
     builder.add_node(ENGINEER, engineer)
     builder.add_node(QA, quality_assurance)
     builder.add_node(TOOLS, supervisor_tool_node)
+    builder.add_node(QA_TOOLS, qa_tool_node)
     builder.add_node(PREPARE_DESIGN, prepare_design_node)
     builder.add_node(PREPARE_IMPLEMENTATION, prepare_implementation_node)
+    builder.add_node(PREPARE_FIX, prepare_fix_node)
 
     builder.set_entry_point(SUPERVISOR)
-
     builder.add_conditional_edges(
         SUPERVISOR,
         supervisor_router,
@@ -146,8 +191,6 @@ def create_graph() -> CompiledStateGraph:
             "end": END,
         },
     )
-
-    # Return to supervisor after tool execution
     builder.add_edge(TOOLS, SUPERVISOR)
 
     # Design lab
@@ -163,7 +206,12 @@ def create_graph() -> CompiledStateGraph:
     builder.add_edge(SCAFFOLDER, TDD)
     builder.add_edge(TDD, ENGINEER)
     builder.add_edge(ENGINEER, QA)
-    builder.add_edge(QA, END)
+
+    builder.add_conditional_edges(
+        QA, qa_router, {"fix": PREPARE_FIX, "tools": QA_TOOLS, "done": END}
+    )
+    builder.add_edge(QA_TOOLS, QA)
+    builder.add_edge(PREPARE_FIX, ENGINEER)
 
     # Graph compilation
     checkpointer = InMemorySaver()
