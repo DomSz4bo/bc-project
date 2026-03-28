@@ -1,6 +1,33 @@
 from pathlib import Path
-
+from typing import Any, NamedTuple
 from loguru import logger
+
+
+class SourceContext(NamedTuple):
+    use_case: str
+    sequence_diagram: str
+    source_code_context: str
+    test_files_context: str
+
+
+def extract_project_context(state: dict[str, Any], working_dir: Path):
+    """
+    Extract design artifacts (UC and Sequence Diagram) from the state and
+    attempts to read source code and test files.
+    """
+    use_case = state.get("use_case")
+    sequence_diagram = state.get("sequence_diagram")
+    if not use_case:
+        raise KeyError("No use_case found in state.")
+    if not sequence_diagram:
+        raise KeyError("No sequence_diagram found in state.")
+    if not working_dir:
+        raise ValueError("Working directory can NOT be None.")
+    source_code_context = read_source_files(working_dir)
+    test_files_context = read_test_files(working_dir)
+    return SourceContext(
+        use_case, sequence_diagram, source_code_context, test_files_context
+    )
 
 
 def read_source_files(root: Path) -> str:
