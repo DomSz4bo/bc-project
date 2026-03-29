@@ -5,7 +5,7 @@ from langgraph.runtime import Runtime
 from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3_flash_lite as llm
+from src.utils.llm import gemini_3p1_flash_lite as llm
 from src.utils.source_context import extract_project_context
 from src.utils.tools import get_mcp_client, run_tests
 
