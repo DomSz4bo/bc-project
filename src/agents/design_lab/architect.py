@@ -6,7 +6,7 @@ from src.graph.state import AgentState, GraphContext
 from src.utils.errors import MermaidValidationLimitExceeded
 from src.utils.llm import gemma_3_27b as llm
 from src.utils.markdown import extract_block
-from src.utils.mmd_validation import validate_mermaid
+from src.utils.mermaid import get_mermaid_reference, validate_mermaid
 
 
 async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
@@ -20,7 +20,10 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentS
     if not use_case:
         raise ValueError("No use_case found in AgentState.")
 
-    messages = [SystemMessage(SYSTEM_PROMPT), HumanMessage(use_case)]
+    mmd_docs = get_mermaid_reference()
+    system_prompt = SYSTEM_PROMPT.replace("{docs}", mmd_docs)
+
+    messages = [SystemMessage(system_prompt), HumanMessage(use_case)]
 
     critic_verdict = state.get("critic_verdict")
     if critic_verdict is not None and critic_verdict == "FAIL":
@@ -107,6 +110,11 @@ sequenceDiagram
 
 ### Faithfulness vs. Comprehensibility
 When these two goals conflict, faithfulness wins. An accurate diagram that is slightly harder to read is preferable to a clean diagram that misrepresents the Use Case.
+
+Here is a summarized reference of the Mermaid Sequence diagram documentation:
+<docs>
+{mmd_docs}
+</docs>
 """
 
 DIAGRAM_FIX_PROMPT = """
