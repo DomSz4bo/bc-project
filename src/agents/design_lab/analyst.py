@@ -2,7 +2,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from loguru import logger
 
 from src.graph.state import AgentState
-from src.utils.llm import gemini_3_flash_lite as llm
+from src.utils.llm import gemma_3_27b as llm
 
 
 async def analyst(state: AgentState) -> AgentState:
