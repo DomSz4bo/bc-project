@@ -21,7 +21,7 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentS
         raise ValueError("No use_case found in AgentState.")
 
     mmd_docs = get_mermaid_reference()
-    system_prompt = SYSTEM_PROMPT.replace("{docs}", mmd_docs)
+    system_prompt = SYSTEM_PROMPT.format(mmd_docs=mmd_docs)
 
     messages = [SystemMessage(system_prompt), HumanMessage(use_case)]
 
