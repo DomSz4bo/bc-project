@@ -39,6 +39,7 @@ QA_TOOLS = "qa_tools"
 PREPARE_DESIGN = "PrepareDesign"
 FINISH_DESIGN = "FinishDesign"
 PREPARE_IMPLEMENTATION = "PrepareImplementation"
+FINISH_IMPLEMENTATION = "FinishImplementation"
 PREPARE_FIX = "PrepareFix"
 
 
@@ -120,11 +121,13 @@ async def finish_design_node(state: AgentState) -> AgentState:
 
     last_msg = state["messages"][-1]
     if not isinstance(last_msg, ToolMessage):
-        raise RuntimeError(f"Expected ToolMessage as last message, got {type(last_msg)}")
-    
+        raise RuntimeError(
+            f"Expected ToolMessage as last message, got {type(last_msg)}"
+        )
+
     tool_call_id = last_msg.tool_call_id
     tool_msg_id = f"design_handoff_res_{tool_call_id}"
-    assert tool_msg_id == last_msg.id 
+    assert tool_msg_id == last_msg.id
 
     prompt = f"""You are the Lead Architect in a 'Visual-First' engineering pipeline. You have finalized a design consisting of a Cockburn Use Case (Intent) and a Mermaid Sequence Diagram (Logic).
 
@@ -145,9 +148,9 @@ STYLE RULES:
 [SEQUENCE DIAGRAM]
 {diagram}
 """
-    
+
     response = await gemma_3_27b.ainvoke(prompt)
-    summary = response.content
+    summary = response.text
 
     return {
         "messages": [
@@ -182,13 +185,39 @@ async def prepare_implementation_node(state: AgentState) -> AgentState:
         ],
         "qa_revision_count": 0,
         "qa_feedback": None,
-        "qa_messages": None
+        "qa_messages": None,
+    }
+
+
+async def finish_implementation_node(state: AgentState) -> AgentState:
+    """
+    Transitions the state to POST_IMPLEMENTATION phase.
+    """
+    last_msg = state["messages"][-1]
+    if not isinstance(last_msg, ToolMessage):
+        raise RuntimeError(
+            f"Expected ToolMessage as last message, got {type(last_msg)}"
+        )
+
+    tool_call_id = last_msg.tool_call_id
+    tool_msg_id = f"implementation_handoff_res_{tool_call_id}"
+    assert tool_msg_id == last_msg.id
+
+    return {
+        "supervisor_phase": "POST_IMPLEMENTATION",
+        "messages": [
+            ToolMessage(
+                content="Implementation phase is complete. All tests have passed.",
+                tool_call_id=tool_call_id,
+                id=tool_msg_id,
+            )
+        ],
     }
 
 
 async def prepare_fix_node(state: AgentState) -> AgentState:
     """
-    Extracts feedback from the rejection tool call and 
+    Extracts feedback from the rejection tool call and
     deletes the QA agent message history.
     """
     last_msg = state["messages"][-1]
@@ -202,7 +231,7 @@ async def prepare_fix_node(state: AgentState) -> AgentState:
     return {
         "qa_feedback": reject_call["args"]["feedback"],
         "qa_revision_count": state.get("qa_revision_count", 0) + 1,
-        "qa_messages": None
+        "qa_messages": None,
     }
 
 
@@ -234,6 +263,7 @@ def create_graph() -> CompiledStateGraph:
     builder.add_node(PREPARE_DESIGN, prepare_design_node)
     builder.add_node(FINISH_DESIGN, finish_design_node)
     builder.add_node(PREPARE_IMPLEMENTATION, prepare_implementation_node)
+    builder.add_node(FINISH_IMPLEMENTATION, finish_implementation_node)
     builder.add_node(PREPARE_FIX, prepare_fix_node)
 
     builder.set_entry_point(SUPERVISOR)
@@ -265,10 +295,13 @@ def create_graph() -> CompiledStateGraph:
     builder.add_edge(ENGINEER, QA)
 
     builder.add_conditional_edges(
-        QA, qa_router, {"fix": PREPARE_FIX, "tools": QA_TOOLS, "done": END}
+        QA,
+        qa_router,
+        {"fix": PREPARE_FIX, "tools": QA_TOOLS, "done": FINISH_IMPLEMENTATION},
     )
     builder.add_edge(QA_TOOLS, QA)
     builder.add_edge(PREPARE_FIX, ENGINEER)
+    builder.add_edge(FINISH_IMPLEMENTATION, SUPERVISOR)
 
     # Graph compilation
     checkpointer = InMemorySaver()

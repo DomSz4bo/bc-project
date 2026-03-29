@@ -9,7 +9,7 @@ class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     user_intent_summary: str | None
     design_notes: str | None
-    supervisor_phase: Literal["INTAKE", "APPROVAL"]
+    supervisor_phase: Literal["INTAKE", "APPROVAL", "POST_IMPLEMENTATION"]
 
     # Design Lab outputs
     use_case: str | None
