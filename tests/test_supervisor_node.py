@@ -3,7 +3,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from src.agents.supervisor import supervisor
+from src.agents.supervisor import (
+    ACTION_TOOLS,
+    handoff_to_design,
+    handoff_to_implementation,
+    supervisor,
+)
 
 
 @pytest.mark.asyncio
@@ -28,9 +33,9 @@ async def test_supervisor_intake_flow():
         result = await supervisor(state)
 
         assert "messages" in result
-        assert result["messages"] == mock_response
+        assert result["messages"] == [mock_response]
 
-        mock_llm.bind_tools.assert_called_once()
+        mock_llm.bind_tools.assert_called_once_with([handoff_to_design])
         
         mock_bound_llm.ainvoke.assert_called_once()
         called_messages = mock_bound_llm.ainvoke.call_args[0][0]
@@ -62,13 +67,44 @@ async def test_supervisor_approval_flow():
 
         result = await supervisor(state)
 
-        assert result["messages"] == mock_response
+        assert result["messages"] == [mock_response]
+        
+        mock_llm.bind_tools.assert_called_once_with([handoff_to_design, handoff_to_implementation])
 
         called_messages = mock_bound_llm.ainvoke.call_args[0][0]
         system_content = called_messages[0].content
         assert "APPROVAL" in system_content
         assert use_case in system_content
         assert sq_diagram in system_content
+
+
+@pytest.mark.asyncio
+async def test_supervisor_post_implementation_flow():
+    """
+    Verify the supervisor correctly formats the POST_IMPLEMENTATION prompt and binds action tools.
+    """
+    mock_response = AIMessage(content="The implementation is complete. Let's review.")
+
+    with patch("src.agents.supervisor.llm") as mock_llm:
+        mock_bound_llm = AsyncMock()
+        mock_llm.bind_tools.return_value = mock_bound_llm
+        mock_bound_llm.ainvoke.return_value = mock_response
+
+        state = {
+            "messages": [HumanMessage(content="What's the status?")],
+            "supervisor_phase": "POST_IMPLEMENTATION",
+        }
+
+        result = await supervisor(state)
+
+        assert result["messages"] == [mock_response]
+        
+        mock_llm.bind_tools.assert_called_once_with(ACTION_TOOLS)
+
+        called_messages = mock_bound_llm.ainvoke.call_args[0][0]
+        system_content = called_messages[0].content
+        assert "POST_IMPLEMENTATION" in system_content
+        assert "Dual-Truth" in system_content
 
 
 @pytest.mark.asyncio
@@ -98,6 +134,6 @@ async def test_supervisor_tool_handoff_call():
 
         result = await supervisor(state)
 
-        assert len(result["messages"].tool_calls) == 1
-        assert result["messages"].tool_calls[0]["name"] == "handoff_to_design"
-        assert result["messages"].tool_calls[0]["args"]["user_intent_summary"] == "Detailed login requirements."
+        assert len(result["messages"][0].tool_calls) == 1
+        assert result["messages"][0].tool_calls[0]["name"] == "handoff_to_design"
+        assert result["messages"][0].tool_calls[0]["args"]["user_intent_summary"] == "Detailed login requirements."
