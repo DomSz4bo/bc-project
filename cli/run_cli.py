@@ -10,6 +10,7 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
+from langgraph.types import StreamPart
 
 from cli.commands import handle_exit, handle_save, handle_save_full
 from src.graph.workflow import create_graph
@@ -93,14 +94,16 @@ class InteractiveCLI:
     def _get_toolbar(self):
         """Generates the bottom toolbar text."""
         return HTML(
-            " Workspace" + " " * (len(str(self.cwd_for_show)) - 7) + ".   Submit    .    Exit   \n"
-            f" {self.cwd_for_show}  │ <key>[Alt+Enter]</key> │  <key>[Ctrl+D]</key> "
+            " Workspace"
+            + " " * (len(str(self.cwd_for_show)) - 7)
+            + ".    Submit     .    Exit    \n"
+            f" {self.cwd_for_show}  │  <key>[Alt+Enter]</key>  │  <key>[Ctrl+D]</key>  "
         )
 
     def _get_prompt_continuation(self, width, line_number, is_soft_wrap):
         """Prefix for 2nd, 3rd, etc. lines in multiline mode."""
         if is_soft_wrap:
-            return HTML(" "*7)
+            return HTML(" " * 7)
         return HTML(f"<line>{line_number: >4}   </line>")
 
     async def _handle_command(self, user_input: str) -> bool:
@@ -117,27 +120,50 @@ class InteractiveCLI:
     async def _execute_workflow(self, user_input: str):
         """Streams events from the LangGraph workflow."""
         input_state = {"messages": [HumanMessage(content=user_input)]}
-        print("\n" + "-" * 20 + " Workflow Execution " + "-" * 20)
 
         graph_context = {
             "max_revisions": 1,
             "working_directory": self.working_directory,
         }
 
-        async for event in self.graph.astream(
+        active_node = None
+
+        async for chunk in self.graph.astream(
             input_state,
             config=self.graph_config,
             context=graph_context,
-            stream_mode="updates",
+            stream_mode=["updates", "messages"],
+            version="v2",
         ):
-            for node_name, updates in event.items():
-                self._process_node_updates(node_name, updates)
+            chunk: StreamPart
+            mode = chunk["type"]
+            
 
-        print("-" * 60 + "\n")
+            if mode == "messages":
+                msg_chunk, metadata = chunk["data"]
+                node_name = metadata.get("langgraph_node")
+
+                if node_name and node_name != active_node:
+                    if active_node == "Supervisor":
+                        print()
+                    active_node = node_name
+                    print(f"\n⚙️  [{node_name}] is actively thinking/executing...")
+
+                if node_name == "Supervisor" and msg_chunk.content:
+                    print(msg_chunk.text, end="", flush=True)
+
+            elif mode == "updates":
+                for node_name, updates in chunk["data"].items():
+                    if active_node == "Supervisor":
+                        print()
+                        active_node = None
+                    self._process_node_updates(node_name, updates)
+
+        print("-" * 10 + "\n")
 
     def _process_node_updates(self, node_name: str, updates: dict[str, Any]):
         """Processes and prints updates from a single workflow node."""
-        print(f"[{node_name}] running...")
+        print(f"✓ [{node_name}] completed task.")
 
         if "supervisor_phase" in updates:
             print(f"  ➜ phase: {updates['supervisor_phase']}")
@@ -157,7 +183,10 @@ class InteractiveCLI:
         if "messages" in updates:
             last_msg = updates["messages"][-1]
             if isinstance(last_msg, AIMessage):
-                print(f"\nAssistant: {last_msg.content}\n")
+                if node_name == "Supervisor":
+                    pass
+                elif last_msg.content:
+                    print(f"\nAssistant ({node_name}): {last_msg.content}\n")
 
     async def run(self):
         """Primary execution loop for the CLI."""
