@@ -1,6 +1,7 @@
 import asyncio
 import locale
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 from langchain.tools import ToolRuntime, tool
@@ -8,27 +9,26 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from src.graph.state import GraphContext
 
-_client = None
 
+@lru_cache(maxsize=1)
 def get_mcp_client():
-    global _client
-    if not _client:
-        _client = MultiServerMCPClient(
-            {
-                "filesystem": {
-                    "transport": "stdio",
-                    "command": "npx",
-                    "args": [
-                        "-y",
-                        "@modelcontextprotocol/server-filesystem",
-                        str(Path.cwd()),
-                    ],
-                }
+    return MultiServerMCPClient(
+        {
+            "filesystem": {
+                "transport": "stdio",
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "@modelcontextprotocol/server-filesystem",
+                    str(Path.cwd()),
+                ],
             }
-        )
-    return _client
+        }
+    )
+
 
 file_tools = asyncio.run(get_mcp_client().get_tools(server_name="filesystem"))
+
 
 @tool
 async def run_tests(runtime: ToolRuntime[GraphContext]) -> str:
