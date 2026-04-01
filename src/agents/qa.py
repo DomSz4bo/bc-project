@@ -33,6 +33,8 @@ routing_tools = [reject_implementation]
 action_tools = [run_tests_with_coverage]
 all_tools = file_tools + routing_tools + action_tools
 
+DEFAULT_REVISION_LIMIT = 3
+
 
 async def quality_assurance(
     state: AgentState, runtime: Runtime[GraphContext]
@@ -42,6 +44,15 @@ async def quality_assurance(
     Identifies issues in the implementation and either rejects it (via tool) or finishes.
     """
     logger.debug("QA node initiated.")
+
+    revision_count = state["qa_revision_count"]
+    revision_limit = runtime.context.get("max_code_revisions", DEFAULT_REVISION_LIMIT)
+
+    if revision_count >= revision_limit:
+        logger.debug("QA node - revision limit hit.")
+        return {
+            "qa_feedback": "LIMIT",
+        }
 
     if state["qa_messages"]:
         messages = state["qa_messages"]

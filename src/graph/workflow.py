@@ -67,6 +67,10 @@ async def supervisor_router(
 async def qa_router(
     state: AgentState,
 ) -> Literal["fix", "tools", "done"]:
+    feedback = state["qa_feedback"]
+    if feedback and feedback == "LIMIT":
+        return "done"
+
     last_message = state["messages"][-1]
     if not last_message.tool_calls:
         return "done"
@@ -113,7 +117,7 @@ async def prepare_design_node(state: AgentState) -> AgentState:
 
 async def finish_design_node(state: AgentState) -> AgentState:
     """
-    Summarizes the results of the Design Lab using gemma_3_27b and 
+    Summarizes the results of the Design Lab using gemma_3_27b and
     overwrites the initial ToolMessage with the final technical briefing.
     """
     use_case = state.get("use_case", "")
