@@ -117,7 +117,7 @@ class TestSkillManager:
 
         warnings = manager.get_warnings()
         assert any("Incorrect frontmatter format" in w for w in warnings)
-        assert any("Missing or incorrect 'name' format" in w for w in warnings)
+        assert any("Missing or incorrect 'name' field" in w for w in warnings)
         assert any("Invalid YAML in frontmatter" in w for w in warnings)
         assert any("Frontmatter must be a YAML dictionary" in w for w in warnings)
 
