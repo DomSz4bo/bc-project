@@ -50,11 +50,6 @@ class SkillManager:
         """
         return self._registry[skill_name]
 
-    # TODO - remove this function
-    def get_skills_registry(self) -> dict[str, SkillInfo]:
-        "Returns the registry of the manager, which contains mappings of skill name to `SkillInfo`."
-        return self._registry
-
     def get_skill_catalog(self) -> str:
         "Returns a structured catalog of skills available. Includes skill names and descriptions."
         if not self._is_cataloged:
@@ -169,9 +164,8 @@ class SkillManager:
         )
 
     SKILL_BLOCK = """  <skill>
-    <name>{name}/name>
+    <name>{name}</name>
     <description>{description}</description>
-    <location>/home/user/.agents/skills/pdf-processing/SKILL.md</location>
   </skill>
 """
 
@@ -186,7 +180,7 @@ class SkillManager:
                 name=skill["name"],
                 description=skill["description"],
             )
-        
+
         catalog += "</available_skills>"
         return catalog
 
