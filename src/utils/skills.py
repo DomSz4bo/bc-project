@@ -98,7 +98,7 @@ class SkillManager:
             file_path=get_relative_path_with_fallback(for_file)
         )
         if error_msg:
-            warning += f"\n  - {error_msg}"
+            warning += f"\n    - {error_msg}"
         self._warnings.append(warning)
 
     def _add_name_conflict_warning(self, for_name: str) -> None:
@@ -150,11 +150,11 @@ class SkillManager:
 
         name = skill_metadata.get("name")
         if not name or not isinstance(name, str):
-            raise SkillParsingError("Missing or incorrect 'name' format.")
+            raise SkillParsingError("Missing or incorrect 'name' field.")
 
         description = skill_metadata.get("description")
         if not description or not isinstance(description, str):
-            raise SkillParsingError("Missing or incorrect 'description' format.")
+            raise SkillParsingError("Missing or incorrect 'description' field.")
 
         return SkillInfo(
             name=name,
