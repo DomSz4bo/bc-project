@@ -1,19 +1,22 @@
 import asyncio
 import uuid
+from os.path import samefile
 from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import StreamPart
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
-from langgraph.types import StreamPart
 
 from cli.commands import handle_exit, handle_save, handle_save_full
+from src.graph.state import GraphContext
 from src.graph.workflow import create_graph
+from src.utils.skills import SkillManager
 
 
 class InteractiveCLI:
@@ -34,6 +37,7 @@ class InteractiveCLI:
         self._setup_paths()
         self._setup_commands()
         self._setup_ui()
+        self._setup_skills()
 
     def _setup_paths(self):
         """Initializes configuration and history paths."""
@@ -48,10 +52,6 @@ class InteractiveCLI:
         self.save_dir.mkdir(exist_ok=True)
         self.history_file = self.config_dir / "history"
         self.output_file = self.config_dir / "output.md"
-
-    def get_relative_path(self, filepath: Path):
-        """Returns the relative path from the CLI's working directory."""
-        return filepath.relative_to(self.working_directory)
 
     def _setup_commands(self):
         """Maps CLI commands to their handler functions."""
@@ -82,6 +82,18 @@ class InteractiveCLI:
             complete_while_typing=True,
             style=style,
         )
+
+    def _setup_skills(self):
+        root_dirs = [self.working_directory]
+
+        source_directory = Path(__file__).parents[1]
+        if not samefile(self.working_directory, source_directory):
+            root_dirs.append(source_directory)
+
+        self.skills_manager = SkillManager(root_dirs)
+        self.skills_manager.reload_skills()
+        for warning in self.skills_manager.get_warnings():
+            print(f"\033[93mWarning:\033[0m {warning}")
 
     def _save_output(self):
         """Saves current use case and sequence diagram to output.md."""
@@ -121,9 +133,10 @@ class InteractiveCLI:
         """Streams events from the LangGraph workflow."""
         input_state = {"messages": [HumanMessage(content=user_input)]}
 
-        graph_context = {
-            "max_revisions": 1,
+        graph_context: GraphContext = {
+            "max_revisions": 3,
             "working_directory": self.working_directory,
+            "skill_manager": self.skills_manager,
         }
 
         active_node = None
@@ -137,7 +150,6 @@ class InteractiveCLI:
         ):
             chunk: StreamPart
             mode = chunk["type"]
-            
 
             if mode == "messages":
                 msg_chunk, metadata = chunk["data"]
@@ -178,7 +190,7 @@ class InteractiveCLI:
             if "sequence_diagram" in updates:
                 self.current_sequence_diagram = updates["sequence_diagram"]
             self._save_output()
-            print(f"  ➜ Updated {self.get_relative_path(self.output_file)}")
+            print(f"  ➜ Updated {self.output_file.relative_to(self.working_directory)}")
 
         if "messages" in updates:
             last_msg = updates["messages"][-1]
@@ -190,10 +202,9 @@ class InteractiveCLI:
 
     async def run(self):
         """Primary execution loop for the CLI."""
-        print("=" * 50)
+        print("\n" + "=" * 50)
         print("🚀 WORKFLOW INTERACTIVE CLI")
         print(f"Session ID: {self.thread_id}")
-        print(f"History saved to: {self.history_file}")
         print("=" * 50 + "\n")
 
         while True:
