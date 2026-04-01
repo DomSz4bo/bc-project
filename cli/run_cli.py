@@ -17,6 +17,7 @@ from rich.console import Console
 from cli.commands import (
     handle_exit,
     handle_list_skills,
+    handle_reload_skills,
     handle_save,
     handle_save_full,
 )
@@ -67,6 +68,7 @@ class InteractiveCLI:
             "/save": handle_save,
             "/save-full": handle_save_full,
             "/skills-list": handle_list_skills,
+            "/skills-reload": handle_reload_skills,
         }
 
     def _setup_ui(self):

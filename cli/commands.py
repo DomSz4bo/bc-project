@@ -52,3 +52,10 @@ async def handle_list_skills(cli: InteractiveCLI):
         cli.console.print(f"  [cyan]{name}[/cyan]: {description}")
     cli.console.print()
     return False
+
+
+async def handle_reload_skills(cli: InteractiveCLI) -> bool:
+    """Reloads Agent skills."""
+    cli.skills_manager.reload_skills()
+    cli.console.print("\n  [green]✓ Agent skills reloaded successfully.[/green]\n")
+    return False
