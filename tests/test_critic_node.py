@@ -23,7 +23,7 @@ async def test_critic_pass():
         }
 
         mock_runtime = MagicMock()
-        mock_runtime.context = {"max_revisions": 3}
+        mock_runtime.context = {"max_diagram_revisions": 3}
 
         result = await critic(state, mock_runtime)
 
@@ -58,7 +58,7 @@ async def test_critic_fail():
         }
 
         mock_runtime = MagicMock()
-        mock_runtime.context = {"max_revisions": 3}
+        mock_runtime.context = {"max_diagram_revisions": 3}
 
         result = await critic(state, mock_runtime)
 
@@ -70,14 +70,14 @@ async def test_critic_fail():
 @pytest.mark.asyncio
 async def test_critic_limit():
     """
-    Verify the critic node returns LIMIT when max_revisions is reached.
+    Verify the critic node returns LIMIT when max_diagram_revisions is reached.
     """
     state = {
         "revision_count": 3,
     }
 
     mock_runtime = MagicMock()
-    mock_runtime.context = {"max_revisions": 3}
+    mock_runtime.context = {"max_diagram_revisions": 3}
 
     with patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm:
         result = await critic(state, mock_runtime)

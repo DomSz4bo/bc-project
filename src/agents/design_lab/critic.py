@@ -29,7 +29,7 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     logger.debug("Critic node initiated.")
 
     revision_count = state["revision_count"]
-    if revision_count >= runtime.context["max_revisions"]:
+    if revision_count >= runtime.context["max_diagram_revisions"]:
         logger.debug("Critic node - revision limit hit.")
         return {
             "critic_verdict": "LIMIT",

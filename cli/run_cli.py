@@ -145,7 +145,7 @@ class InteractiveCLI:
         input_state = {"messages": [HumanMessage(content=user_input)]}
 
         graph_context: GraphContext = {
-            "max_revisions": 3,
+            "max_diagram_revisions": 3,
             "working_directory": self.working_directory,
             "skill_manager": self.skills_manager,
         }
