@@ -31,6 +31,33 @@ file_tools = asyncio.run(get_mcp_client().get_tools(server_name="filesystem"))
 
 
 @tool
+async def activate_skill(skill_name: str, runtime: ToolRuntime[GraphContext]) -> str:
+    """
+    Loads full instructions of the skill with the give `skill_name`.
+    Use this tool when a task matches a skill's description.
+    """
+    skill_manager = runtime.context.get("skill_manager", None)
+
+    if skill_manager is None or not skill_manager.has_skill(skill_name):
+        return (
+            "There was an issue accessing the skill. "
+            f"Make sure '{skill_name}' is a valid skill name listed in your skill catalog."
+        )
+
+    skill = skill_manager.get_skill(skill_name)
+
+    skill_content = f"""<skill_content name="{skill["name"]}">
+{skill["body"]}
+
+Skill directory: {skill["location"].parent}
+Relative paths in this skill are relative to the skill directory.
+</skill_content>
+"""
+
+    return skill_content
+
+
+@tool
 async def run_tests(runtime: ToolRuntime[GraphContext]) -> str:
     """
     Executes the pytest suite. Returns the output of the test run.
