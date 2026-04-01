@@ -42,7 +42,7 @@ async def handle_save_full(cli: InteractiveCLI) -> bool:
     return False
 
 
-async def handle_skills(cli: InteractiveCLI) -> bool:
+async def handle_list_skills(cli: InteractiveCLI) -> bool:
     """Lists all available skills."""
     skills = cli.skills_manager.get_all_skills()
     if not skills:
