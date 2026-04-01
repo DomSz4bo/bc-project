@@ -24,12 +24,18 @@ class CriticOutput(BaseModel):
 
 llm_with_structure = llm.with_structured_output(CriticOutput)
 
+DEFAULT_REVISION_LIMIT = 3
+
 
 async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
     logger.debug("Critic node initiated.")
 
     revision_count = state["revision_count"]
-    if revision_count >= runtime.context["max_diagram_revisions"]:
+    revision_limit = runtime.context.get(
+        "max_diagram_revisions", DEFAULT_REVISION_LIMIT
+    )
+
+    if revision_count >= revision_limit:
         logger.debug("Critic node - revision limit hit.")
         return {
             "critic_verdict": "LIMIT",
