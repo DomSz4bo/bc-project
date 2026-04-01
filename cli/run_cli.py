@@ -4,6 +4,7 @@ from os.path import samefile
 from pathlib import Path
 from typing import Any
 
+from colorama import Fore, Style, init
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import StreamPart
@@ -11,12 +12,14 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
-from prompt_toolkit.styles import Style
+from prompt_toolkit.styles import Style as PromptStyle
 
 from cli.commands import handle_exit, handle_save, handle_save_full, handle_skills
 from src.graph.state import GraphContext
 from src.graph.workflow import create_graph
 from src.utils.skills import SkillManager
+
+init(autoreset=True)
 
 
 class InteractiveCLI:
@@ -67,7 +70,7 @@ class InteractiveCLI:
         commands = list(self.commands_map.keys())
         commands_completer = WordCompleter(commands, ignore_case=True, sentence=True)
 
-        style = Style.from_dict(
+        style = PromptStyle.from_dict(
             {
                 "prompt": "ansicyan bold",
                 "line": "ansigray",
@@ -94,7 +97,14 @@ class InteractiveCLI:
         self.skills_manager = SkillManager(root_dirs)
         self.skills_manager.reload_skills()
         for warning in self.skills_manager.get_warnings():
-            print(f"\033[93mWarning:\033[0m {warning}")
+            print(f"{Fore.YELLOW}Warning:{Style.RESET_ALL} {warning}")
+
+    def get_relative_path(self, path: Path) -> str:
+        """Returns the path relative to the working directory if possible."""
+        try:
+            return str(path.relative_to(self.working_directory))
+        except ValueError:
+            return str(path)
 
     def _save_output(self):
         """Saves current use case and sequence diagram to output.md."""
@@ -127,7 +137,7 @@ class InteractiveCLI:
         if action:
             return await action(cli=self)
 
-        print(f"\033[91mUnknown command: {user_input}\033[0m")
+        print(f"{Fore.RED}Unknown command: {user_input}{Style.RESET_ALL}")
         return False
 
     async def _execute_workflow(self, user_input: str):
@@ -191,7 +201,7 @@ class InteractiveCLI:
             if "sequence_diagram" in updates:
                 self.current_sequence_diagram = updates["sequence_diagram"]
             self._save_output()
-            print(f"  ➜ Updated {self.output_file.relative_to(self.working_directory)}")
+            print(f"  ➜ Updated {self.get_relative_path(self.output_file)}")
 
         if "messages" in updates:
             last_msg = updates["messages"][-1]
@@ -235,8 +245,10 @@ class InteractiveCLI:
             except EOFError:
                 break
             except Exception as e:
-                print(f"\n❌ \033[91mError ({type(e).__name__}):\033[0m {e}")
-        print("\n\033[93mExiting... Goodbye!\033[0m")
+                print(
+                    f"\n❌ {Fore.RED}Error ({type(e).__name__}):{Style.RESET_ALL} {e}"
+                )
+        print(f"\n{Fore.YELLOW}Exiting... Goodbye!{Style.RESET_ALL}")
 
 
 def main():

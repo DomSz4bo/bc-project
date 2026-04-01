@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from colorama import Fore, Style
+
 from cli.utils import save_to_json, serialize_snapshot
 
 if TYPE_CHECKING:
@@ -22,7 +24,7 @@ async def handle_save(cli: InteractiveCLI) -> bool:
     filepath = cli.save_dir / f"state_{thread_prefix}.json"
     save_to_json(serialize_snapshot(state), filepath)
     relative_path = cli.get_relative_path(filepath)
-    print(f"  ➜  Saved current state to \033[94m{relative_path}\033[0m")
+    print(f"  ➜  Saved current state to {Fore.BLUE}{relative_path}{Style.RESET_ALL}")
     return False
 
 
@@ -34,7 +36,9 @@ async def handle_save_full(cli: InteractiveCLI) -> bool:
     serialized_history = [serialize_snapshot(s) for s in history]
     save_to_json(serialized_history, filepath)
     relative_path = cli.get_relative_path(filepath)
-    print(f"  ➜  Saved full state history to \033[94m{relative_path}\033[0m")
+    print(
+        f"  ➜  Saved full state history to{Fore.BLUE}{relative_path}{Style.RESET_ALL}"
+    )
     return False
 
 
@@ -42,13 +46,13 @@ async def handle_skills(cli: InteractiveCLI) -> bool:
     """Lists all available skills."""
     skills = cli.skills_manager.get_all_skills()
     if not skills:
-        print("  \033[93mNo skills currently available.\033[0m")
+        print(f"  {Fore.YELLOW}No skills currently available.{Style.RESET_ALL}")
         return False
 
-    print("\n  \033[1mAvailable Skills:\033[0m")
+    print(f"\n  {Style.BRIGHT}Available Skills:{Style.RESET_ALL}")
     for skill in skills:
         name = skill["name"]
         description = skill["description"]
-        print(f"  \033[96m{name}\033[0m: {description}")
+        print(f"  {Fore.CYAN}{name}{Style.RESET_ALL}: {description}")
     print()
     return False
