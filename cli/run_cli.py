@@ -4,7 +4,6 @@ from os.path import samefile
 from pathlib import Path
 from typing import Any
 
-from colorama import Fore, Style, init
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import StreamPart
@@ -13,13 +12,17 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style as PromptStyle
+from rich.console import Console
 
-from cli.commands import handle_exit, handle_save, handle_save_full, handle_list_skills
+from cli.commands import (
+    handle_exit,
+    handle_list_skills,
+    handle_save,
+    handle_save_full,
+)
 from src.graph.state import GraphContext
 from src.graph.workflow import create_graph
 from src.utils.skills import SkillManager
-
-init(autoreset=True)
 
 
 class InteractiveCLI:
@@ -28,6 +31,7 @@ class InteractiveCLI:
     """
 
     def __init__(self):
+        self.console = Console()
         self.graph = create_graph()
         self.thread_id = str(uuid.uuid4())
         self.graph_config: RunnableConfig = {
@@ -97,7 +101,7 @@ class InteractiveCLI:
         self.skills_manager = SkillManager(root_dirs)
         self.skills_manager.reload_skills()
         for warning in self.skills_manager.get_warnings():
-            print(f"{Fore.YELLOW}Warning:{Style.RESET_ALL} {warning}")
+            self.console.print(f"[yellow]Warning:[/yellow] {warning}")
 
     def get_relative_path(self, path: Path) -> str:
         """Returns the path relative to the working directory if possible."""
@@ -137,7 +141,7 @@ class InteractiveCLI:
         if action:
             return await action(cli=self)
 
-        print(f"{Fore.RED}Unknown command: {user_input}{Style.RESET_ALL}")
+        self.console.print(f"[red]Unknown command:[/red] {user_input}")
         return False
 
     async def _execute_workflow(self, user_input: str):
@@ -145,55 +149,68 @@ class InteractiveCLI:
         input_state = {"messages": [HumanMessage(content=user_input)]}
 
         graph_context: GraphContext = {
-            "max_diagram_revisions": 3,
+            "max_revisions": 3,
             "working_directory": self.working_directory,
             "skill_manager": self.skills_manager,
         }
 
         active_node = None
+        status = self.console.status(
+            "[bold yellow]Starting workflow...[/bold yellow]", spinner="dots"
+        )
 
-        async for chunk in self.graph.astream(
-            input_state,
-            config=self.graph_config,
-            context=graph_context,
-            stream_mode=["updates", "messages"],
-            version="v2",
-        ):
-            chunk: StreamPart
-            mode = chunk["type"]
+        try:
+            status.start()
+            async for chunk in self.graph.astream(
+                input_state,
+                config=self.graph_config,
+                context=graph_context,
+                stream_mode=["updates", "messages"],
+                version="v2",
+            ):
+                chunk: StreamPart
+                mode = chunk["type"]
 
-            if mode == "messages":
-                msg_chunk, metadata = chunk["data"]
-                node_name = metadata.get("langgraph_node")
+                if mode == "messages":
+                    msg_chunk, metadata = chunk["data"]
+                    node_name = metadata.get("langgraph_node")
 
-                if node_name and node_name != active_node:
-                    if active_node == "Supervisor":
-                        print()
-                    active_node = node_name
-                    print(f"\n⚙️  [{node_name}] is actively thinking/executing...")
+                    if node_name and node_name != active_node:
+                        active_node = node_name
+                        status.update(
+                            f"[bold yellow]⚙️  [{node_name}] is actively thinking/executing...[/bold yellow]"
+                        )
+                        if not status._live.is_started:
+                            status.start()
 
-                if node_name == "Supervisor" and msg_chunk.content:
-                    print(msg_chunk.text, end="", flush=True)
+                    if node_name == "Supervisor" and msg_chunk.content:
+                        # if status._live.is_started:
+                        #     status.stop()
+                        self.console.print(msg_chunk.text, end="")
 
-            elif mode == "updates":
-                for node_name, updates in chunk["data"].items():
-                    if active_node == "Supervisor":
-                        print()
-                        active_node = None
-                    self._process_node_updates(node_name, updates)
+                elif mode == "updates":
+                    for node_name, updates in chunk["data"].items():
+                        if status._live.is_started:
+                            # status.stop()
+                            active_node = None
+                        self._process_node_updates(node_name, updates)
 
-        print("-" * 10 + "\n")
+        finally:
+            if status._live.is_started:
+                status.stop()
+
+        self.console.print("-" * 10 + "\n")
 
     def _process_node_updates(self, node_name: str, updates: dict[str, Any]):
         """Processes and prints updates from a single workflow node."""
-        print(f"✓ [{node_name}] completed task.")
+        self.console.print(f"✓ [{node_name}] completed task.")
 
         if "supervisor_phase" in updates:
-            print(f"  ➜ phase: {updates['supervisor_phase']}")
+            self.console.print(f"  ➜ phase: {updates['supervisor_phase']}")
         if "critic_verdict" in updates:
-            print(f"  ➜ critic: {updates['critic_verdict']}")
+            self.console.print(f"  ➜ critic: {updates['critic_verdict']}")
         if "critic_feedback" in updates:
-            print(f"  ➜ feedback: {updates['critic_feedback']}")
+            self.console.print(f"  ➜ feedback: {updates['critic_feedback']}")
 
         if "use_case" in updates or "sequence_diagram" in updates:
             if "use_case" in updates:
@@ -201,7 +218,9 @@ class InteractiveCLI:
             if "sequence_diagram" in updates:
                 self.current_sequence_diagram = updates["sequence_diagram"]
             self._save_output()
-            print(f"  ➜ Updated {self.get_relative_path(self.output_file)}")
+            self.console.print(
+                f"  ➜ Updated {self.get_relative_path(self.output_file)}"
+            )
 
         if "messages" in updates:
             last_msg = updates["messages"][-1]
@@ -209,14 +228,16 @@ class InteractiveCLI:
                 if node_name == "Supervisor":
                     pass
                 elif last_msg.content:
-                    print(f"\nAssistant ({node_name}): {last_msg.content}\n")
+                    self.console.print(
+                        f"\nAssistant ({node_name}): {last_msg.content}\n"
+                    )
 
     async def run(self):
         """Primary execution loop for the CLI."""
-        print("\n" + "=" * 50)
-        print("🚀 WORKFLOW INTERACTIVE CLI")
-        print(f"Session ID: {self.thread_id}")
-        print("=" * 50 + "\n")
+        self.console.print("\n" + "=" * 50)
+        self.console.print("🚀 WORKFLOW INTERACTIVE CLI")
+        self.console.print(f"Session ID: {self.thread_id}")
+        self.console.print("=" * 50 + "\n")
 
         while True:
             try:
@@ -245,10 +266,8 @@ class InteractiveCLI:
             except EOFError:
                 break
             except Exception as e:
-                print(
-                    f"\n❌ {Fore.RED}Error ({type(e).__name__}):{Style.RESET_ALL} {e}"
-                )
-        print(f"\n{Fore.YELLOW}Exiting... Goodbye!{Style.RESET_ALL}")
+                self.console.print(f"\n❌ [red]Error ({type(e).__name__}):[/red] {e}")
+        self.console.print("\n[yellow]Exiting... Goodbye![/yellow]")
 
 
 def main():
