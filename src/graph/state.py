@@ -4,6 +4,8 @@ from typing import Annotated, Literal, TypedDict
 from langchain.messages import AnyMessage
 from langgraph.graph import add_messages
 
+from src.utils.skills import SkillManager
+
 
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
@@ -29,3 +31,4 @@ class GraphContext(TypedDict):
     max_revisions: int
     working_directory: Path
     mmd_syntax_validation_limit: int
+    skill_manager: SkillManager
