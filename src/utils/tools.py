@@ -44,15 +44,7 @@ async def activate_skill(skill_name: str, runtime: ToolRuntime[GraphContext]) ->
             f"Make sure '{skill_name}' is a valid skill name listed in your skill catalog."
         )
 
-    skill = skill_manager.get_skill(skill_name)
-
-    skill_content = f"""<skill_content name="{skill["name"]}">
-{skill["body"]}
-
-Skill directory: {skill["location"].parent}
-Relative paths in this skill are relative to the skill directory.
-</skill_content>
-"""
+    skill_content = skill_manager.build_structured_content(skill_name)
 
     return skill_content
 

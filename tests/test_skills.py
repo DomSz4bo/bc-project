@@ -162,3 +162,90 @@ class TestSkillManager:
         assert not manager.has_skill("skill1")
         assert manager.get_skill_catalog() == ""
         assert not manager.has_available_skills()
+
+    def test_get_all_skills(self, tmp_path):
+        root = tmp_path / "root"
+        create_skill_file(
+            root / ".agents" / "skills" / "s1" / "SKILL.md", "skill1", "desc1", "body1"
+        )
+        create_skill_file(
+            root / ".agents" / "skills" / "s2" / "SKILL.md", "skill2", "desc2", "body2"
+        )
+
+        manager = SkillManager([root])
+        manager.reload_skills()
+
+        skills = manager.get_all_skills()
+        assert len(skills) == 2
+        names = {s["name"] for s in skills}
+        assert names == {"skill1", "skill2"}
+
+    def test_resource_content_block(self, tmp_path):
+        root = tmp_path / "root"
+        skill_dir = root / ".agents" / "skills" / "skill1"
+        skill_file = skill_dir / "SKILL.md"
+        create_skill_file(skill_file, "test-skill", "desc", "body")
+
+        # Add resources
+        (skill_dir / "script.py").write_text("print('hello')", encoding="utf-8")
+        (skill_dir / "data").mkdir()
+        (skill_dir / "data" / "info.txt").write_text("some info", encoding="utf-8")
+
+        # Add junk to ignore
+        (skill_dir / ".hidden").write_text("hidden", encoding="utf-8")
+        (skill_dir / "__pycache__").mkdir()
+        (skill_dir / "__pycache__" / "cached.pyc").write_text(
+            "cached", encoding="utf-8"
+        )
+        (skill_dir / "subdir").mkdir()
+        (skill_dir / "subdir" / ".gitkeep").write_text("", encoding="utf-8")
+
+        manager = SkillManager([root])
+        manager.reload_skills()
+        skill = manager.get_skill("test-skill")
+
+        # Call the "private" method for testing
+        resource_block = manager._build_resource_content_block(skill)
+
+        assert "<skill_resources>" in resource_block
+        assert "  <file>data/info.txt</file>" in resource_block
+        assert "  <file>script.py</file>" in resource_block
+        assert "</skill_resources>" in resource_block
+
+        # Check ignored files
+        assert "SKILL.md" not in resource_block
+        assert ".hidden" not in resource_block
+        assert "__pycache__" not in resource_block
+        assert ".gitkeep" not in resource_block
+
+    def test_resource_content_block_empty(self, tmp_path):
+        root = tmp_path / "root"
+        skill_file = root / ".agents" / "skills" / "skill1" / "SKILL.md"
+        create_skill_file(skill_file, "test-skill", "desc", "body")
+
+        manager = SkillManager([root])
+        manager.reload_skills()
+        skill = manager.get_skill("test-skill")
+
+        resource_block = manager._build_resource_content_block(skill)
+        assert resource_block == ""
+
+    def test_build_structured_content(self, tmp_path):
+        root = tmp_path / "root"
+        skill_dir = root / ".agents" / "skills" / "skill1"
+        skill_file = skill_dir / "SKILL.md"
+        create_skill_file(skill_file, "test-skill", "desc", "Body Content")
+        (skill_dir / "readme.txt").write_text("readme", encoding="utf-8")
+
+        manager = SkillManager([root])
+        manager.reload_skills()
+
+        content = manager.build_structured_content("test-skill")
+
+        assert '<skill_content name="test-skill">' in content
+        assert "Body Content" in content
+        assert "Skill directory:" in content
+        assert str(skill_dir.absolute()) in content
+        assert "<skill_resources>" in content
+        assert "  <file>readme.txt</file>" in content
+        assert "</skill_content>" in content

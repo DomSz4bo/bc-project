@@ -54,6 +54,64 @@ class SkillManager:
         """Returns a list of all registered skills."""
         return list(self._registry.values())
 
+    CONTENT_STRUCTURE = (
+        '<skill_content name="{name}">\n{body}\n'
+        "Skill directory: {skill_dir}\n"
+        "Relative paths in this skill are relative to the skill directory.\n"
+        "{resources}\n</skill_content>"
+    )
+
+    def build_structured_content(self, skill_name: str) -> str:
+        """
+        Creates a structured wrapping of the skill content,
+        including resources after the body.
+        """
+        skill = self.get_skill(skill_name)
+
+        resource_block = self._build_resource_content_block(skill)
+        skill_content = self.CONTENT_STRUCTURE.format(
+            name=skill["name"],
+            body=skill["body"],
+            skill_dir=skill["location"].parent,
+            resources=resource_block,
+        )
+
+        return skill_content
+
+    def _build_resource_content_block(self, skill: SkillInfo) -> str:
+        skill_dir = skill["location"].parent
+        resource_files = self._list_resource_files(skill_dir)
+
+        if not resource_files:
+            return ""
+
+        block_lines = ["<skill_resources>"]
+        for res in resource_files:
+            block_lines.append(
+                f"  <file>{res.relative_to(skill_dir).as_posix()}</file>"
+            )
+        block_lines.append("</skill_resources>")
+
+        return "\n".join(block_lines)
+
+    def _list_resource_files(self, skill_dir: Path) -> list[Path]:
+        resources: list[Path] = []
+
+        def should_ignore(part: str) -> bool:
+            return part.startswith(".") or part == "__pycache__"
+
+        for path in sorted(skill_dir.rglob("*")):
+            if not path.is_file() or path.name == SKILL_MD:
+                continue
+
+            rel_path = path.relative_to(skill_dir)
+            if any(should_ignore(part) for part in rel_path.parts):
+                continue
+
+            resources.append(path)
+
+        return resources
+
     def get_skill_catalog(self) -> str:
         "Returns a structured catalog of skills available. Includes skill names and descriptions."
         if not self._is_cataloged:
@@ -167,11 +225,12 @@ class SkillManager:
             body=markdown_content,
         )
 
-    SKILL_BLOCK = """  <skill>
-    <name>{name}</name>
-    <description>{description}</description>
-  </skill>
-"""
+    SKILL_BLOCK = (
+        "  <skill>\n"
+        "    <name>{name}</name>\n"
+        "    <description>{description}</description>\n"
+        "  </skill>"
+    )
 
     def _build_skill_catalog(self) -> str:
         if not self._registry:
