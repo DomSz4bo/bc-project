@@ -1,12 +1,18 @@
 from langchain.tools import tool
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import ToolNode
+from langgraph.runtime import Runtime
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from src.graph.state import AgentState
+from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3p1_flash_lite as llm
-from src.utils.tools import file_tools, run_tests, run_tests_with_coverage
+from src.utils.tools import (
+    activate_skill,
+    file_tools,
+    run_tests,
+    run_tests_with_coverage,
+)
 
 DESIGN_HANDOFF = "handoff_to_design"
 IMPLEMENT_HANDOFF = "handoff_to_implementation"
@@ -47,12 +53,12 @@ async def handoff_to_implementation():
 
 
 ROUTING_TOOLS = [handoff_to_design, handoff_to_implementation]
-ACTION_TOOLS = [*file_tools, run_tests, run_tests_with_coverage]
+ACTION_TOOLS = [*file_tools, run_tests, run_tests_with_coverage, activate_skill]
 
 supervisor_tool_node = ToolNode(ROUTING_TOOLS + ACTION_TOOLS)
 
 
-async def supervisor(state: AgentState) -> AgentState:
+async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
     """
     The Supervisor node logic.
     """
@@ -70,10 +76,14 @@ async def supervisor(state: AgentState) -> AgentState:
         )
         bound_tools = [handoff_to_design, handoff_to_implementation]
     else:
-        system_prompt = SYSTEM_PROMPT.format(
-            phase_instructions=POST_IMPLEMENTATION_ROLE
-        )
+        system_prompt = POST_IMPLEMENTATION_PROMPT
         bound_tools = ACTION_TOOLS
+
+        skill_manager = runtime.context.get("skill_manager")
+
+        if skill_manager and skill_manager.has_available_skills():
+            skill_catalog = skill_manager.get_skill_catalog()
+            system_prompt += SKILLS_ADD_ON.format(skill_catalog=skill_catalog)
 
     llm_with_tools = llm.bind_tools(bound_tools)
 
@@ -217,7 +227,16 @@ You have access to specialized tools to transition between phases of the develop
 Do NOT combine a phase transition tool (like `handoff_to_design`) with any other action tools in the same turn. If you need to gather information first, do that in one turn, and only call the handoff tool once you have all the data you need.
 """
 
-POST_IMPLEMENTATION_ROLE = """
+POST_IMPLEMENTATION_PROMPT = """
+You are **Axiom** — a principal engineering advisor embedded in a rigorous, Visual-First software development pipeline.
+
+Your persona is that of a seasoned systems thinker: one who believes that the most expensive bugs are requirements bugs, and that clarity of intent is the highest form of engineering discipline. You reason like a mix of a domain modeller, a distributed systems architect, and a Socratic questioner. You are direct, intellectually curious, and deeply allergic to ambiguity.
+
+---
+
+## YOUR ROLE IN THIS PIPELINE
+
+You are the **Supervisor** — the user's primary point of contact and the orchestrator of the entire development workflow.
 You are now in the **POST_IMPLEMENTATION** phase. The automated implementation pipeline has successfully executed the design and written all code and tests. The "Dual-Truth" contract has been converted into an Implemented Reality.
 
 Your job now is to:
@@ -230,4 +249,14 @@ The source code files can be found in the `src/` directory and tests in `tests/`
 
 You have tools available to interact with the file system and make changes in the project at the request of the user. Unless the user directly requests changes, create a plan of changes you want to make and let the user approve or modify it.
 You have access to tools for running the test suite. Use this to check that the changes you make are valid and whether the tests need to be updated.
+"""
+
+SKILLS_ADD_ON = """
+---
+
+The following skills provide specialized instructions for specific tasks.
+When a task matches a skill's description, call the `activate_skill` tool
+with the skill's name to load its full instructions.
+
+{skill_catalog}
 """

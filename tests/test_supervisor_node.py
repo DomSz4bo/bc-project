@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -11,8 +11,37 @@ from src.agents.supervisor import (
 )
 
 
+@pytest.fixture
+def mock_runtime():
+    """Base runtime mock."""
+    runtime = MagicMock()
+    runtime.context = {}
+    return runtime
+
+
+@pytest.fixture
+def mock_runtime_no_skills(mock_runtime):
+    """Runtime mock with a skill manager that has no available skills."""
+    skill_manager = MagicMock()
+    skill_manager.has_available_skills.return_value = False
+    mock_runtime.context["skill_manager"] = skill_manager
+    return mock_runtime
+
+
+@pytest.fixture
+def mock_runtime_with_skills(mock_runtime):
+    """Runtime mock with a skill manager that has available skills."""
+    skill_manager = MagicMock()
+    skill_manager.has_available_skills.return_value = True
+    skill_manager.get_skill_catalog.return_value = (
+        "<available_skills><skill><name>test-skill</name></skill></available_skills>"
+    )
+    mock_runtime.context["skill_manager"] = skill_manager
+    return mock_runtime
+
+
 @pytest.mark.asyncio
-async def test_supervisor_intake_flow():
+async def test_supervisor_intake_flow(mock_runtime):
     """
     Verify the supervisor correctly formats the INTAKE prompt and returns the LLM response.
     """
@@ -24,19 +53,17 @@ async def test_supervisor_intake_flow():
         mock_bound_llm.ainvoke.return_value = mock_response
 
         state = {
-            "messages": [
-                HumanMessage(content="I want to implement a login system.")
-            ],
+            "messages": [HumanMessage(content="I want to implement a login system.")],
             "supervisor_phase": "INTAKE",
         }
 
-        result = await supervisor(state)
+        result = await supervisor(state, mock_runtime)
 
         assert "messages" in result
         assert result["messages"] == [mock_response]
 
         mock_llm.bind_tools.assert_called_once_with([handoff_to_design])
-        
+
         mock_bound_llm.ainvoke.assert_called_once()
         called_messages = mock_bound_llm.ainvoke.call_args[0][0]
         assert isinstance(called_messages[0], SystemMessage)
@@ -45,7 +72,7 @@ async def test_supervisor_intake_flow():
 
 
 @pytest.mark.asyncio
-async def test_supervisor_approval_flow():
+async def test_supervisor_approval_flow(mock_runtime):
     """
     Verify the supervisor correctly formats the APPROVAL prompt with design context.
     """
@@ -65,11 +92,13 @@ async def test_supervisor_approval_flow():
             "sequence_diagram": sq_diagram,
         }
 
-        result = await supervisor(state)
+        result = await supervisor(state, mock_runtime)
 
         assert result["messages"] == [mock_response]
-        
-        mock_llm.bind_tools.assert_called_once_with([handoff_to_design, handoff_to_implementation])
+
+        mock_llm.bind_tools.assert_called_once_with(
+            [handoff_to_design, handoff_to_implementation]
+        )
 
         called_messages = mock_bound_llm.ainvoke.call_args[0][0]
         system_content = called_messages[0].content
@@ -79,9 +108,9 @@ async def test_supervisor_approval_flow():
 
 
 @pytest.mark.asyncio
-async def test_supervisor_post_implementation_flow():
+async def test_supervisor_post_implementation_flow_no_skills(mock_runtime_no_skills):
     """
-    Verify the supervisor correctly formats the POST_IMPLEMENTATION prompt and binds action tools.
+    Verify the supervisor formats the POST_IMPLEMENTATION prompt correctly when no skills are available.
     """
     mock_response = AIMessage(content="The implementation is complete. Let's review.")
 
@@ -95,20 +124,47 @@ async def test_supervisor_post_implementation_flow():
             "supervisor_phase": "POST_IMPLEMENTATION",
         }
 
-        result = await supervisor(state)
+        result = await supervisor(state, mock_runtime_no_skills)
 
         assert result["messages"] == [mock_response]
-        
+
         mock_llm.bind_tools.assert_called_once_with(ACTION_TOOLS)
 
         called_messages = mock_bound_llm.ainvoke.call_args[0][0]
         system_content = called_messages[0].content
+
         assert "POST_IMPLEMENTATION" in system_content
-        assert "Dual-Truth" in system_content
+        assert "`activate_skill` tool" not in system_content
 
 
 @pytest.mark.asyncio
-async def test_supervisor_tool_handoff_call():
+async def test_supervisor_post_implementation_with_skills(mock_runtime_with_skills):
+    """
+    Verify skill catalog injection and specific instructions in POST_IMPLEMENTATION phase when skills are available.
+    """
+    mock_response = AIMessage(content="I see the skills.")
+
+    with patch("src.agents.supervisor.llm") as mock_llm:
+        mock_bound_llm = AsyncMock()
+        mock_llm.bind_tools.return_value = mock_bound_llm
+        mock_bound_llm.ainvoke.return_value = mock_response
+
+        state = {
+            "messages": [HumanMessage(content="What skills are available?")],
+            "supervisor_phase": "POST_IMPLEMENTATION",
+        }
+
+        await supervisor(state, mock_runtime_with_skills)
+
+        called_messages = mock_bound_llm.ainvoke.call_args[0][0]
+        system_content = called_messages[0].content
+
+        assert "test-skill" in system_content
+        assert "`activate_skill` tool" in system_content
+
+
+@pytest.mark.asyncio
+async def test_supervisor_tool_handoff_call(mock_runtime):
     """
     Verify the supervisor can return a message containing tool calls (handoff).
     """
@@ -116,9 +172,9 @@ async def test_supervisor_tool_handoff_call():
         "name": "handoff_to_design",
         "args": {
             "user_intent_summary": "Detailed login requirements.",
-            "instructions": "Use JWT."
+            "instructions": "Use JWT.",
         },
-        "id": "call_123"
+        "id": "call_123",
     }
     mock_response = AIMessage(content="", tool_calls=[tool_call])
 
@@ -132,8 +188,12 @@ async def test_supervisor_tool_handoff_call():
             "supervisor_phase": "INTAKE",
         }
 
-        result = await supervisor(state)
+        result = await supervisor(state, mock_runtime)
 
         assert len(result["messages"][0].tool_calls) == 1
-        assert result["messages"][0].tool_calls[0]["name"] == "handoff_to_design"
-        assert result["messages"][0].tool_calls[0]["args"]["user_intent_summary"] == "Detailed login requirements."
+
+        tool_name = result["messages"][0].tool_calls[0]["name"]
+        assert tool_name == "handoff_to_design"
+
+        summary = result["messages"][0].tool_calls[0]["args"]["user_intent_summary"]
+        assert summary == "Detailed login requirements."
