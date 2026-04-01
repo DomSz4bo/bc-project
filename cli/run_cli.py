@@ -13,7 +13,7 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 
-from cli.commands import handle_exit, handle_save, handle_save_full
+from cli.commands import handle_exit, handle_save, handle_save_full, handle_skills
 from src.graph.state import GraphContext
 from src.graph.workflow import create_graph
 from src.utils.skills import SkillManager
@@ -59,6 +59,7 @@ class InteractiveCLI:
             "/exit": handle_exit,
             "/save": handle_save,
             "/save-full": handle_save_full,
+            "/skills-list": handle_skills,
         }
 
     def _setup_ui(self):

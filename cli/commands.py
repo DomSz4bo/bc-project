@@ -36,3 +36,19 @@ async def handle_save_full(cli: InteractiveCLI) -> bool:
     relative_path = cli.get_relative_path(filepath)
     print(f"  ➜  Saved full state history to \033[94m{relative_path}\033[0m")
     return False
+
+
+async def handle_skills(cli: InteractiveCLI) -> bool:
+    """Lists all available skills."""
+    skills = cli.skills_manager.get_all_skills()
+    if not skills:
+        print("  \033[93mNo skills currently available.\033[0m")
+        return False
+
+    print("\n  \033[1mAvailable Skills:\033[0m")
+    for skill in skills:
+        name = skill["name"]
+        description = skill["description"]
+        print(f"  \033[96m{name}\033[0m: {description}")
+    print()
+    return False

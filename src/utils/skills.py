@@ -50,6 +50,10 @@ class SkillManager:
         """
         return self._registry[skill_name]
 
+    def get_all_skills(self) -> list[SkillInfo]:
+        """Returns a list of all registered skills."""
+        return list(self._registry.values())
+
     def get_skill_catalog(self) -> str:
         "Returns a structured catalog of skills available. Includes skill names and descriptions."
         if not self._is_cataloged:
