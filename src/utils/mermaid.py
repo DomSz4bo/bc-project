@@ -22,19 +22,17 @@ rendering_tool = asyncio.run(client.get_tools())[0]
 
 class ValidationResult(NamedTuple):
     is_valid: bool
-    error_message: str | None
+    error_message: str | None = None
 
 
 async def validate_mermaid(mermaid_code: str) -> ValidationResult:
     try:
         await rendering_tool.ainvoke({"mermaid": mermaid_code, "outputType": "mermaid"})
-        is_valid = True
+        return ValidationResult(True)
     except McpError as e:
-        is_valid = False
         error_msg = e.error.message
         error_msg = error_msg[error_msg.find(": ") + 2 :]
-
-    return ValidationResult(is_valid, None if is_valid else error_msg)
+        return ValidationResult(False, error_msg)
 
 
 @lru_cache(maxsize=1)
@@ -42,7 +40,9 @@ def get_mermaid_reference() -> str:
     """
     Reads the Mermaid sequence diagram reference documentation.
     """
-    mmd_reference_path = Path(__file__).parents[2] / "files" / "mermaid_sqd_reference.md"
+    mmd_reference_path = (
+        Path(__file__).parents[2] / "files" / "mermaid_sqd_reference.md"
+    )
     if mmd_reference_path.exists():
         return mmd_reference_path.read_text(encoding="utf-8")
     ## TODO
@@ -61,4 +61,3 @@ if __name__ == "__main__":
     end = perf_counter()
     print(f"Result: {result}, \t time: {end - start} s")
     print("\n", get_mermaid_reference())
-
