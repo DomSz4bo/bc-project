@@ -90,6 +90,9 @@ async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
     response = await llm_with_tools.ainvoke(messages)
 
+    logged_reply = response.text[:15] + ("..." if len(response.text) > 15 else "")
+    logger.debug(f"Supervisor replied: {logged_reply}")
+
     return {"messages": [response]}
 
 

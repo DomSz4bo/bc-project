@@ -53,6 +53,8 @@ async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
         )
         await engineer_agent.ainvoke({"messages": [input_message]})
 
+    logger.debug("Engineer finished work.")
+
     return {}
 
 

@@ -73,6 +73,7 @@ async def quality_assurance(
 
     llm_with_tools = llm.bind_tools(all_tools)
     response = await llm_with_tools.ainvoke(messages)
+    logger.debug("QA made a move.")
 
     return {"qa_messages": messages + [response]}
 
@@ -82,6 +83,7 @@ async def qa_tool_node(state: AgentState) -> AgentState:
     Wraps a ToolNode to achieve custom state update behaviour.
     Executes the QA's tool calls.
     """
+    logger.debug("QA tool node initiated.")
     qa_messages = state.get("qa_messages")
     if not qa_messages:
         raise ValueError("There are no qa_messages")

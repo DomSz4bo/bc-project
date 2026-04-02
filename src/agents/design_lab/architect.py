@@ -40,7 +40,7 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentS
         "mmd_syntax_validation_limit", FIX_LIMIT_DEFAULT
     )
 
-    for _ in range(validation_limit):
+    for i in range(validation_limit):
         response = await llm.ainvoke(messages)
         text_response = response.text
         mmd_code = extract_block(text_response, "mermaid")
@@ -48,6 +48,8 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentS
         validation_result = await validate_mermaid(mmd_code)
         if validation_result.is_valid:
             break
+
+        logger.debug(f"Architect - invalid syntax for check n.{i+1}")
 
         messages += [
             AIMessage(text_response),
