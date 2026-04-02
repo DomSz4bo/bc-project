@@ -1,4 +1,4 @@
-from typing import List
+from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.runtime import Runtime
@@ -17,11 +17,17 @@ class Component(BaseModel):
         description="The snake_case name of the file without extension (e.g., payment_processor)"
     )
 
+    def __str__(self):
+        return f"{self.file_name} -> {self.class_name}"
+
 
 class ScaffoldPlan(BaseModel):
-    components: List[Component] = Field(
+    components: list[Component] = Field(
         description="List of internal system components to scaffold"
     )
+
+    def __str__(self):
+        return "\n".join(str(comp) for comp in self.components)
 
 
 structured_llm = llm.with_structured_output(ScaffoldPlan)
@@ -53,8 +59,15 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     ]
 
     plan: ScaffoldPlan = await structured_llm.ainvoke(messages)
-    logger.debug(f"Scaffolder plan: {plan}")
+    logger.debug(f"Scaffolder plan:\n{plan}")
 
+    write_scaffold_to_disk(plan, src_dir)
+    logger.debug("Scaffold written to disk.")
+
+    return state
+
+
+def write_scaffold_to_disk(plan: ScaffoldPlan, src_dir: Path) -> None:
     src_dir.mkdir(parents=True, exist_ok=True)
     (src_dir / "__init__.py").touch(exist_ok=True)
 
@@ -66,8 +79,6 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
         logger.info(f"Scaffolding {file_path}")
         with open(file_path, "w") as f:
             f.write(content)
-
-    return state
 
 
 SYSTEM_PROMPT = """
