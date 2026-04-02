@@ -6,6 +6,7 @@ from pathlib import Path
 
 from langchain.tools import ToolRuntime, tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from loguru import logger
 
 from src.graph.state import GraphContext
 
@@ -46,6 +47,8 @@ async def activate_skill(skill_name: str, runtime: ToolRuntime[GraphContext]) ->
 
     skill_content = skill_manager.build_structured_content(skill_name)
 
+    logger.debug(f"activate_skill tool: {skill_name}")
+
     return skill_content
 
 
@@ -59,6 +62,8 @@ async def run_tests(runtime: ToolRuntime[GraphContext]) -> str:
     output, returncode = await _run_async_subprocess_with_output(
         sys.executable, *args, cwd=runtime.context["working_directory"]
     )
+
+    logger.debug("run_tests tool")
 
     if returncode == 0:
         return f"✅ Tests Passed\n{output}"
@@ -76,6 +81,8 @@ async def run_tests_with_coverage(runtime: ToolRuntime[GraphContext]) -> str:
     output, returncode = await _run_async_subprocess_with_output(
         sys.executable, *args, cwd=runtime.context["working_directory"]
     )
+
+    logger.debug("run_tests_with_coverage")
 
     if returncode == 0:
         return f"✅ Tests Passed\n{output}"
