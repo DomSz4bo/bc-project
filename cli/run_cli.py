@@ -6,7 +6,12 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.types import StreamPart
+from langgraph.types import (
+    CustomStreamPart,
+    MessagesStreamPart,
+    StreamPart,
+    UpdatesStreamPart,
+)
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import HTML
@@ -22,7 +27,7 @@ from cli.commands import (
     handle_save_full,
 )
 from src.graph.state import GraphContext
-from src.graph.workflow import create_graph
+from src.graph.workflow import create_graph, SUPERVISOR
 from src.utils.skills import SkillManager
 
 
@@ -157,54 +162,60 @@ class InteractiveCLI:
             "skill_manager": self.skills_manager,
         }
 
-        active_node = None
-        status = self.console.status(
-            "[bold yellow]Starting workflow...[/bold yellow]", spinner="dots"
+        self.active_node = None
+        self.status = self.console.status(
+            "[bold]Starting workflow...[/bold]", spinner="hearts"
         )
 
         try:
-            status.start()
+            self.status.start()
             async for chunk in self.graph.astream(
                 input_state,
                 config=self.graph_config,
                 context=graph_context,
-                stream_mode=["updates", "messages"],
+                stream_mode=["updates", "messages", "custom"],
                 version="v2",
             ):
                 chunk: StreamPart
-                mode = chunk["type"]
-
-                if mode == "messages":
-                    msg_chunk, metadata = chunk["data"]
-                    node_name = metadata.get("langgraph_node")
-
-                    if node_name and node_name != active_node:
-                        active_node = node_name
-                        status.update(
-                            f"[bold yellow]⚙️  [{node_name}] is actively thinking/executing...[/bold yellow]"
-                        )
-                        if not status._live.is_started:
-                            status.start()
-
-                    if node_name == "Supervisor" and msg_chunk.content:
-                        # if status._live.is_started:
-                        #     status.stop()
-                        self.console.print(msg_chunk.text, end="")
-
-                elif mode == "updates":
-                    for node_name, updates in chunk["data"].items():
-                        if status._live.is_started:
-                            # status.stop()
-                            active_node = None
-                        self._process_node_updates(node_name, updates)
-
+                match chunk["type"]:
+                    case "messages":
+                        self._process_message_stream(chunk)
+                    case "custom":
+                        self._process_custom_stream(chunk)
+                    case "updates":
+                        self._process_update_stream(chunk)
+                    case _:
+                        pass
         finally:
-            if status._live.is_started:
-                status.stop()
+            self.status.stop()
+            self.active_node = None
 
         self.console.print("-" * 10 + "\n")
 
-    def _process_node_updates(self, node_name: str, updates: dict[str, Any]):
+    def _process_custom_stream(self, chunk: CustomStreamPart) -> None:
+        self.status.start()
+        self.status.update("New status", spinner="arc")
+
+    def _process_message_stream(self, chunk: MessagesStreamPart) -> None:
+        self.status.stop()
+        msg_chunk, metadata = chunk["data"]
+        node_name = metadata.get("langgraph_node")
+
+        if node_name and node_name != self.active_node:
+            self.active_node = node_name
+
+        if node_name == SUPERVISOR and msg_chunk.content:
+            self.console.print(msg_chunk.text, end="")
+
+    def _process_update_stream(self, chunk: UpdatesStreamPart) -> None:
+        self.status.start()
+        for node_name, update in chunk["data"].items():
+            if len(update) > 1:
+                raise ValueError("You though it's only a single update.")
+            self._process_node_update(node_name, update)
+        
+
+    def _process_node_update(self, node_name: str, updates: dict[str, Any]):
         """Processes and prints updates from a single workflow node."""
         self.console.print(f"✓ [{node_name}] completed task.")
 
