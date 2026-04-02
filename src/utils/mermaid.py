@@ -45,9 +45,7 @@ def get_mermaid_reference() -> str:
     )
     if mmd_reference_path.exists():
         return mmd_reference_path.read_text(encoding="utf-8")
-    ## TODO
-    raise FileNotFoundError("Mermaid reference file not found!")
-    # return "Mermaid reference documentation not found."
+    return "Mermaid reference documentation not found."
 
 
 if __name__ == "__main__":
