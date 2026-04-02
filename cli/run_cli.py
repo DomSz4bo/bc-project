@@ -51,9 +51,9 @@ class InteractiveCLI:
         """Initializes configuration and history paths."""
         self.working_directory = Path.cwd()
         try:
-            self.cwd_for_show = "~" / self.working_directory.relative_to(Path.home())
+            self.cwd_str = str("~" / self.working_directory.relative_to(Path.home()))
         except ValueError:
-            self.cwd_for_show = self.working_directory
+            self.cwd_str = str(self.working_directory)
         self.config_dir = self.working_directory / ".app_cli"
         self.config_dir.mkdir(exist_ok=True)
         self.save_dir = self.config_dir / "saved_states"
@@ -122,11 +122,12 @@ class InteractiveCLI:
 
     def _get_toolbar(self):
         """Generates the bottom toolbar text."""
+
+        normalized_size = max(len(self.cwd_str), 9)
         return HTML(
-            " Workspace"
-            + " " * (len(str(self.cwd_for_show)) - 7)
-            + ".    Submit     .    Exit    \n"
-            f" {self.cwd_for_show}  │  <key>[Alt+Enter]</key>  │  <key>[Ctrl+D]</key>  "
+            f" {'Workspace': ^{normalized_size}}  .    Submit     .    Exit    \n"
+            f" {self.cwd_str: <{normalized_size}}  │"
+            "  <key>[Alt+Enter]</key>  │  <key>[Ctrl+D]</key>  "
         )
 
     def _get_prompt_continuation(self, width, line_number, is_soft_wrap):
