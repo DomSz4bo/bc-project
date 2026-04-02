@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -24,9 +25,7 @@ class TDDPlan(BaseModel):
 structured_llm = llm.with_structured_output(TDDPlan)
 
 
-async def tdd_lead(
-    state: AgentState, runtime: Runtime[GraphContext]
-) -> AgentState:
+async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
     """
     The TDD Lead node logic.
     Generates a test suite and updates source code stubs based on the Use Case and Sequence Diagram.
@@ -50,6 +49,13 @@ async def tdd_lead(
     plan: TDDPlan = await structured_llm.ainvoke(messages)
     logger.debug(f"TDD Lead plan: {len(plan.files)} files to write.")
 
+    write_tests_to_disk(plan, working_dir)
+    logger.debug("TDD plan written to disk.")
+
+    return state
+
+
+def write_tests_to_disk(plan: TDDPlan, working_dir: Path) -> None:
     for file_change in plan.files:
         clean_path = file_change.path.lstrip("/\\")
         full_path = working_dir / clean_path
@@ -58,8 +64,6 @@ async def tdd_lead(
         full_path.parent.mkdir(parents=True, exist_ok=True)
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(file_change.content)
-
-    return state
 
 
 SYSTEM_PROMPT = """
