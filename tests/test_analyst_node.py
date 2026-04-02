@@ -34,3 +34,18 @@ async def test_analyst_generation():
 
         assert isinstance(called_messages[1], HumanMessage)
         assert "I want a JWT login system." in called_messages[1].content
+
+
+@pytest.mark.asyncio
+async def test_analyst_missing_summary():
+    """
+    Verify the analyst fails if the user intent summary is missing.
+    """
+    mock_response = AIMessage(content="Nothing.")
+
+    with patch("src.agents.design_lab.analyst.llm") as mock_llm:
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+
+        state = {}
+        with pytest.raises(ValueError, match="No user_intent_summary"):
+            await analyst(state)
