@@ -64,7 +64,7 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     write_scaffold_to_disk(plan, src_dir)
     logger.debug("Scaffold written to disk.")
 
-    return state
+    return {}
 
 
 def write_scaffold_to_disk(plan: ScaffoldPlan, src_dir: Path) -> None:

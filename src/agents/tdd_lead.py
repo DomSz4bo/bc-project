@@ -52,7 +52,7 @@ async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
     write_tests_to_disk(plan, working_dir)
     logger.debug("TDD plan written to disk.")
 
-    return state
+    return {}
 
 
 def write_tests_to_disk(plan: TDDPlan, working_dir: Path) -> None:
