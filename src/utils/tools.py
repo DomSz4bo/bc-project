@@ -46,9 +46,6 @@ async def activate_skill(skill_name: str, runtime: ToolRuntime[GraphContext]) ->
         )
 
     skill_content = skill_manager.build_structured_content(skill_name)
-
-    logger.debug(f"activate_skill tool: {skill_name}")
-
     return skill_content
 
 
@@ -63,11 +60,11 @@ async def run_tests(runtime: ToolRuntime[GraphContext]) -> str:
         sys.executable, *args, cwd=runtime.context["working_directory"]
     )
 
-    logger.debug("run_tests tool")
-
     if returncode == 0:
+        logger.debug("run_tests executed: Tests PASSED.")
         return f"✅ Tests Passed\n{output}"
     else:
+        logger.debug("run_tests executed: Tests FAILED.")
         return f"❌ Tests Failed (Code {returncode}):\n{output}"
 
 
@@ -82,11 +79,11 @@ async def run_tests_with_coverage(runtime: ToolRuntime[GraphContext]) -> str:
         sys.executable, *args, cwd=runtime.context["working_directory"]
     )
 
-    logger.debug("run_tests_with_coverage")
-
     if returncode == 0:
+        logger.debug("run_tests_with_coverage executed: Tests PASSED.")
         return f"✅ Tests Passed\n{output}"
     else:
+        logger.debug("run_tests executed: Tests FAILED.")
         return f"❌ Tests Failed (Code {returncode}):\n{output}"
 
 
