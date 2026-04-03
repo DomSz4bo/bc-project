@@ -1,7 +1,6 @@
 from typing import Literal
 
 from langchain_core.globals import set_verbose
-from langchain_core.messages import ToolMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -11,18 +10,25 @@ from src.agents import (
     architect,
     critic,
     engineer,
+    quality_assurance,
     scaffolder,
+    supervisor,
     tdd_lead,
 )
-from src.agents.qa import quality_assurance, REJECT_IMPLEMENTATION, qa_tool_node
+from src.agents.qa import REJECT_IMPLEMENTATION, qa_tool_node
 from src.agents.supervisor import (
     DESIGN_HANDOFF,
     IMPLEMENT_HANDOFF,
-    supervisor,
     supervisor_tool_node,
 )
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemma_3_27b
+from src.graph.util_nodes import (
+    finish_design_node,
+    finish_implementation_node,
+    prepare_design_node,
+    prepare_fix_node,
+    prepare_implementation_node,
+)
 
 set_verbose(True)
 
@@ -81,162 +87,6 @@ async def qa_router(
         return "tools"
 
     return "fix"
-
-
-async def prepare_design_node(state: AgentState) -> AgentState:
-    """
-    Extracts the user intent summary and optional instructions from the
-    handoff tool call to prepare the state for the Design Lab.
-    Adds an initial ToolMessage that will be overwritten later.
-    """
-    last_msg = state["messages"][-1]
-    handoff_call = next(
-        (tc for tc in last_msg.tool_calls if tc["name"] == DESIGN_HANDOFF), None
-    )
-
-    if not handoff_call:
-        return {}
-
-    tool_call_id = handoff_call["id"]
-    return {
-        "user_intent_summary": handoff_call["args"]["user_intent_summary"],
-        "design_notes": handoff_call["args"].get("instructions"),
-        "messages": [
-            ToolMessage(
-                content="Design Lab initiated. The team is now processing the requirements.",
-                tool_call_id=tool_call_id,
-                id=f"design_handoff_res_{tool_call_id}",
-            )
-        ],
-        "sequence_diagram": None,
-        "critic_verdict": None,
-        "critic_feedback": None,
-        "revision_count": 0,
-    }
-
-
-async def finish_design_node(state: AgentState) -> AgentState:
-    """
-    Summarizes the results of the Design Lab using gemma_3_27b and
-    overwrites the initial ToolMessage with the final technical briefing.
-    """
-    use_case = state.get("use_case", "")
-    diagram = state.get("sequence_diagram", "")
-
-    last_msg = state["messages"][-1]
-    if not isinstance(last_msg, ToolMessage):
-        raise RuntimeError(
-            f"Expected ToolMessage as last message, got {type(last_msg)}"
-        )
-
-    tool_call_id = last_msg.tool_call_id
-    tool_msg_id = f"design_handoff_res_{tool_call_id}"
-    assert tool_msg_id == last_msg.id
-
-    prompt = f"""You are the Lead Architect in a 'Visual-First' engineering pipeline. You have finalized a design consisting of a Cockburn Use Case (Intent) and a Mermaid Sequence Diagram (Logic).
-
-Deliver a dense, high-signal technical briefing for Axiom, the Principal Systems Engineer. Axiom is allergic to ambiguity; your summary must verify the architectural integrity of this 'Dual-Truth' contract.
-
-CONTENT REQUIREMENTS:
-1. Core Workflow: Define the primary state transition and actor boundaries.
-2. Edge Cases: Identify 2-3 specific error boundaries or conditional flows (Extensions) handled.
-
-STYLE RULES:
-- NO preamble, NO greetings ("Hello Axiom"), NO conversational filler.
-- Use precise engineering terminology (e.g., idempotency, post-conditions, asynchronous callbacks).
-- Limit: ~60 words of high-density technical prose.
-
-[USE CASE]
-{use_case}
-
-[SEQUENCE DIAGRAM]
-{diagram}
-"""
-
-    response = await gemma_3_27b.ainvoke(prompt)
-    summary = response.text
-
-    return {
-        "messages": [
-            ToolMessage(
-                content=summary,
-                tool_call_id=tool_call_id,
-                id=tool_msg_id,
-            )
-        ],
-        "supervisor_phase": "APPROVAL",
-    }
-
-
-async def prepare_implementation_node(state: AgentState) -> AgentState:
-    """
-    Acknowledges the implementation handoff tool call.
-    """
-    last_msg = state["messages"][-1]
-    handoff_call = next(
-        (tc for tc in last_msg.tool_calls if tc["name"] == IMPLEMENT_HANDOFF), None
-    )
-
-    if not handoff_call:
-        return {}
-
-    return {
-        "messages": [
-            ToolMessage(
-                content="Implementation phase initiated...",
-                tool_call_id=handoff_call["id"],
-            )
-        ],
-        "qa_revision_count": 0,
-        "qa_feedback": None,
-        "qa_messages": None,
-    }
-
-
-async def finish_implementation_node(state: AgentState) -> AgentState:
-    """
-    Transitions the state to POST_IMPLEMENTATION phase.
-    """
-    last_msg = state["messages"][-1]
-    if not isinstance(last_msg, ToolMessage):
-        raise RuntimeError(
-            f"Expected ToolMessage as last message, got {type(last_msg)}"
-        )
-
-    tool_call_id = last_msg.tool_call_id
-    tool_msg_id = f"implementation_handoff_res_{tool_call_id}"
-    assert tool_msg_id == last_msg.id
-
-    return {
-        "supervisor_phase": "POST_IMPLEMENTATION",
-        "messages": [
-            ToolMessage(
-                content="Implementation phase is complete. All tests have passed.",
-                tool_call_id=tool_call_id,
-                id=tool_msg_id,
-            )
-        ],
-    }
-
-
-async def prepare_fix_node(state: AgentState) -> AgentState:
-    """
-    Extracts feedback from the rejection tool call and
-    deletes the QA agent message history.
-    """
-    last_msg = state["messages"][-1]
-    reject_call = next(
-        (tc for tc in last_msg.tool_calls if tc["name"] == REJECT_IMPLEMENTATION), None
-    )
-
-    if not reject_call:
-        raise RuntimeError("No feedback tool call found: QA --!-> Engineer.")
-
-    return {
-        "qa_feedback": reject_call["args"]["feedback"],
-        "qa_revision_count": state.get("qa_revision_count", 0) + 1,
-        "qa_messages": None,
-    }
 
 
 async def critic_router(state: AgentState) -> Literal["fix", "done"]:
