@@ -144,3 +144,18 @@ bc-project/
           John-->>-Alice: Hi Alice, I can hear you!
           John-->>-Alice: I feel great!!
         ```
+
+---
+
+# Agent instructions
+
+## OS and Shell
+The current environment is Windows 11 and the Shell is probably Powershell. So use powershell commands.
+
+## Knowledge validation
+Whenever there is use of domain specific, fast-changing information, ALWAYS make use of your 
+tools to refresh your memory and be able to present up-to-date information.
+
+For LangChain/LangGraph you should use the `mcp_docs-langchain_get_page_docs_by_lang_chain` and 
+`mcp_docs-langchain_search_docs_by_lang_chain` tools.
+
