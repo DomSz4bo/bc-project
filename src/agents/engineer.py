@@ -2,6 +2,7 @@ from langchain.agents import create_agent
 from langchain.messages import HumanMessage
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.runtime import Runtime
+from langchain_core.runnables import RunnableConfig
 from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
@@ -11,7 +12,9 @@ from src.utils.source_context import extract_project_context
 from src.utils.tools import get_mcp_client, run_tests
 
 
-async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
+async def engineer(
+    state: AgentState, runtime: Runtime[GraphContext], config: RunnableConfig
+) -> AgentState:
     """
     Engineer agent.
     Writes the implementation for the designed system and tests.
@@ -76,10 +79,11 @@ Your mandate is to write the concrete code implementation for the system based s
 
 ## WORKFLOW
 1. **Analyze:** Review the source code stubs and test files provided in the context.
-2. **Implement:** Use filesystem tools to write the required logic.
-3. **Verify:** Run the `run_tests` tool.
-4. **Fix:** If tests fail, analyze the failures, apply fixes, and run `run_tests` again.
-5. **Finish:** Once all tests pass, provide a brief summary of your implementation. Do not finish until all tests pass.
+2. **Plan**: Create a plan of what the implementation will look like.
+3. **Implement:** Use filesystem tools to write the required logic.
+4. **Verify:** Run the `run_tests` tool.
+5. **Fix:** If tests fail, analyze the failures, apply fixes, and run `run_tests` again.
+6. **Finish:** Once all tests pass, provide a brief summary of your implementation. Do not finish until all tests pass.
 """
 
 
