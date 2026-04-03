@@ -6,6 +6,7 @@ from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.middleware import LoggingMiddleware, ToolErrorMiddleware
 from src.utils.source_context import extract_project_context
 from src.utils.tools import get_mcp_client, run_tests
 
@@ -50,6 +51,7 @@ async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
             all_tools,
             system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,
+            middleware=[LoggingMiddleware(), ToolErrorMiddleware()],
         )
         await engineer_agent.ainvoke({"messages": [input_message]})
 
