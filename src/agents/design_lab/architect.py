@@ -4,7 +4,7 @@ from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.errors import MermaidValidationLimitExceeded
-from src.utils.llm import gemma_3_27b as llm
+from src.utils.llm import gemini_3p1_flash_lite as llm
 from src.utils.markdown import extract_block
 from src.utils.mermaid import get_mermaid_reference, validate_mermaid
 
