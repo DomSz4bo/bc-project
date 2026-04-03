@@ -51,7 +51,7 @@ async def engineer(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
             all_tools,
             system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,
-            middleware=[LoggingMiddleware(), ToolErrorMiddleware()],
+            middleware=[ToolErrorMiddleware(), LoggingMiddleware()],
         )
         await engineer_agent.ainvoke({"messages": [input_message]})
 
