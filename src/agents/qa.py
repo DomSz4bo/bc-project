@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash as llm
+from src.utils.middleware import LoggingMiddleware, format_tool_error
 from src.utils.source_context import extract_project_context
 from src.utils.tools import file_tools, run_tests_with_coverage
 
@@ -24,7 +25,7 @@ async def reject_implementation(feedback: str) -> str:
     """
     Signals that the current implementation is inadequate and must be fixed by the Engineer.
     Call this when unit tests fail or there are significant code quality issues.
-     Provide detailed feedback on what needs fixing.
+    Provide detailed feedback on what needs fixing.
     """
     return "Handoff to Engineer failed - called with other tools."
 
@@ -35,6 +36,8 @@ all_tools = file_tools + routing_tools + action_tools
 
 DEFAULT_REVISION_LIMIT = 3
 
+logging_mw = LoggingMiddleware()
+
 
 async def quality_assurance(
     state: AgentState, runtime: Runtime[GraphContext]
@@ -43,13 +46,13 @@ async def quality_assurance(
     The QA node logic.
     Identifies issues in the implementation and either rejects it (via tool) or finishes.
     """
-    logger.debug("QA node initiated.")
+    logger.info("QA node initiated.")
 
     revision_count = state["qa_revision_count"]
     revision_limit = runtime.context.get("max_code_revisions", DEFAULT_REVISION_LIMIT)
 
     if revision_count >= revision_limit:
-        logger.debug("QA node - revision limit hit.")
+        logger.warning("QA node - revision limit hit.")
         return {
             "qa_feedback": "LIMIT",
         }
@@ -73,7 +76,7 @@ async def quality_assurance(
 
     llm_with_tools = llm.bind_tools(all_tools)
     response = await llm_with_tools.ainvoke(messages)
-    logger.debug("QA made a move.")
+    logger.info("QA agent has replied.")
 
     return {"qa_messages": messages + [response]}
 
@@ -88,7 +91,12 @@ async def qa_tool_node(state: AgentState) -> AgentState:
     if not qa_messages:
         raise ValueError("There are no qa_messages")
 
-    tool_node = ToolNode(all_tools)
+    tool_node = ToolNode(
+        all_tools,
+        wrap_tool_call=logging_mw.wrap_tool_call,
+        awrap_tool_call=logging_mw.awrap_tool_call,
+        handle_tool_errors=format_tool_error,
+    )
     response: list[ToolMessage] = await tool_node.ainvoke(qa_messages)
 
     if not isinstance(response[0], ToolMessage):
