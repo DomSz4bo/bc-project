@@ -2,79 +2,79 @@
 sequenceDiagram
     autonumber
     actor Customer
-    participant System
-    participant Inventory as Inventory Service
-    participant Bank as Coin Handler
+    participant VendingMachine
+    participant Inventory
+    participant Bank
 
     activate Customer
-    Customer-)+System: Select Product (Product ID)
+    Customer-)+VendingMachine: Select Product (Product ID)
     deactivate Customer
     
-    System->>+Inventory: Check Stock (Product ID)
-    deactivate System
+    VendingMachine->>+Inventory: Check Stock (Product ID)
+    deactivate VendingMachine
 
     alt 2a: Product Out of Stock
-        Inventory-->>+System: Out of Stock
+        Inventory-->>+VendingMachine: Out of Stock
         deactivate Inventory
-        System--)Customer: Display "Out of Stock"
-        System->>-System: Reset Session State
+        VendingMachine--)Customer: Display "Out of Stock"
+        VendingMachine->>-VendingMachine: Reset Session State
     else 2: Product In Stock
         rect rgb(245, 245, 245)
-            Note over Customer, System: [Cancelable zone]  
+            Note over Customer, VendingMachine: [Cancelable zone]  
             activate Inventory
-            Inventory-->>+System: In Stock  
+            Inventory-->>+VendingMachine: In Stock  
             deactivate Inventory
-            System->>+Inventory: Get Price (Product ID)
-            deactivate System
-            Inventory-->>+System: Price
+            VendingMachine->>+Inventory: Get Price (Product ID)
+            deactivate VendingMachine
+            Inventory-->>+VendingMachine: Price
             deactivate Inventory
-            System-)-Customer: Prompt to Insert Coins
+            VendingMachine-)-Customer: Prompt to Insert Coins
 
             loop Inserted Amount < Price
                 Customer->>+Bank: Insert Coins
-                Bank-->>-System: Total Inserted Amount
-                activate System
-                deactivate System
+                Bank-->>-VendingMachine: Total Inserted Amount
+                activate VendingMachine
+                deactivate VendingMachine
                 
-                activate System
-                System-->>-Customer: Display "Remaining Balance Required"
+                activate VendingMachine
+                VendingMachine-->>-Customer: Display "Remaining Balance Required"
             end
             break User cancels or walks away - timeout
                 alt Use cancels
-                    Customer-)+System: Press Cancel
-                    deactivate System
-                else System times out 
-                    System ->>+System: timeout
+                    Customer-)+VendingMachine: Press Cancel
+                    deactivate VendingMachine
+                else VendingMachine times out 
+                    VendingMachine ->>+VendingMachine: timeout
                 end
-                System-)+Bank: Return Coins
+                VendingMachine-)+Bank: Return Coins
                 deactivate Bank
-                System->>System: Reset State
+                VendingMachine->>VendingMachine: Reset State
             end
         end
         
 
-        System->>+Bank: Can Provide Change?
-        deactivate System
+        VendingMachine->>+Bank: Can Provide Change?
+        deactivate VendingMachine
         
         alt 9a: Unable to Provide Change
-            Bank-->>+System: No
+            Bank-->>+VendingMachine: No
             deactivate Bank
-            System--)Customer: Display "Exact Change Required"
-            System-)+Bank: Return All Inserted Coins
-            deactivate System
+            VendingMachine--)Customer: Display "Exact Change Required"
+            VendingMachine-)+Bank: Return All Inserted Coins
+            deactivate VendingMachine
             deactivate Bank
         else 9: Change Available
             activate Bank
-            Bank-->>+System: Yes
+            Bank-->>+VendingMachine: Yes
             deactivate Bank
-            System-)+Inventory: Dispense Product (Product ID)
+            VendingMachine-)+Inventory: Dispense Product (Product ID)
             deactivate Inventory
-            System-)+Bank: Dispense Change (Amount - Price)
+            VendingMachine-)+Bank: Dispense Change (Amount - Price)
             deactivate Bank
-            System--)Customer: Product & Change Delivered
-            System->>+System: Record Transaction & Reset Balance
-            deactivate System
-            deactivate System
+            VendingMachine--)Customer: Product & Change Delivered
+            VendingMachine->>+VendingMachine: Record Transaction & Reset Balance
+            deactivate VendingMachine
+            deactivate VendingMachine
         end
     end
 ```
