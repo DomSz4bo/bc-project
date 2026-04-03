@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.middleware import LoggingMiddleware, format_tool_error
 from src.utils.tools import (
     activate_skill,
     file_tools,
@@ -55,7 +56,14 @@ async def handoff_to_implementation():
 ROUTING_TOOLS = [handoff_to_design, handoff_to_implementation]
 ACTION_TOOLS = [*file_tools, run_tests, run_tests_with_coverage, activate_skill]
 
-supervisor_tool_node = ToolNode(ROUTING_TOOLS + ACTION_TOOLS)
+logging_mw = LoggingMiddleware()
+
+supervisor_tool_node = ToolNode(
+    ROUTING_TOOLS + ACTION_TOOLS,
+    wrap_tool_call=logging_mw.wrap_tool_call,
+    awrap_tool_call=logging_mw.awrap_tool_call,
+    handle_tool_errors=format_tool_error,
+)
 
 
 async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
