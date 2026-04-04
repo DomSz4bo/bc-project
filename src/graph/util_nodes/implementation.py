@@ -17,11 +17,13 @@ async def prepare_implementation_node(state: AgentState) -> AgentState:
     if not handoff_call:
         return {}
 
+    tool_call_id = handoff_call["id"]
     return {
         "messages": [
             ToolMessage(
                 content="Implementation phase initiated...",
-                tool_call_id=handoff_call["id"],
+                tool_call_id=tool_call_id,
+                id=f"implementation_handoff_res_{tool_call_id}",
             )
         ],
         "qa_revision_count": 0,

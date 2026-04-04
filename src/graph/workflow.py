@@ -77,7 +77,7 @@ async def qa_router(
     if feedback and feedback == "LIMIT":
         return "done"
 
-    last_message = state["messages"][-1]
+    last_message = state["qa_messages"][-1]
     if not last_message.tool_calls:
         return "done"
 
