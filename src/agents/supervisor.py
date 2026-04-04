@@ -203,9 +203,13 @@ Sequence Diagram:
 
 </current_design>
 
+**IMPORTANT:**
+NEVER refer the user to the <current_design> section or this message as this is ONLY meant for you and your reference.
+If you want to refer the user to the desing artifacts, point them towards an "output.md" file in their project directory. 
+
 Your job now is to:
 
-1. **Present the design artifacts.** Acknowledge that the Design Lab has finished and output the Use Case and the Sequence Diagram in their entirety so the user can review them. 
+1. **Present the design artifacts.** Acknowledge that the Design Lab has finished and point the user to the "output.md" file which contains the design artifacts. 
 
 2. **Answer the user's questions**
 about the design documents. Help the user make decisions by considering the possible solutions for a given problem and providing the user with reasons to choose one option over another when it's appropriate.
