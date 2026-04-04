@@ -1,12 +1,13 @@
 from langchain.agents import create_agent
+from langchain.agents.middleware import ModelFallbackMiddleware, ModelRetryMiddleware
 from langchain.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.runtime import Runtime
-from langchain_core.runnables import RunnableConfig
 from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.llm import gemini_3_flash, gemini_3p1_flash_lite
 from src.utils.middleware import LoggingMiddleware, ToolErrorMiddleware
 from src.utils.source_context import extract_project_context
 from src.utils.tools import get_mcp_client, run_tests
@@ -50,13 +51,23 @@ async def engineer(
         all_tools = file_tools + [run_tests]
 
         engineer_agent = create_agent(
-            llm,
+            gemini_3_flash,
             all_tools,
             system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,
-            middleware=[ToolErrorMiddleware(), LoggingMiddleware()],
+            middleware=[
+                ModelRetryMiddleware(
+                    on_failure="error",
+                    initial_delay=8,
+                    backoff_factor=8,
+                    max_delay=80,
+                ),
+                ModelFallbackMiddleware(gemini_3p1_flash_lite),
+                ToolErrorMiddleware(),
+                LoggingMiddleware(),
+            ],
         )
-        await engineer_agent.ainvoke({"messages": [input_message]})
+        await engineer_agent.ainvoke({"messages": [input_message]}, config=config)
 
     logger.debug("Engineer finished work.")
 
