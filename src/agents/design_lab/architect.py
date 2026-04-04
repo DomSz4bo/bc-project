@@ -4,9 +4,11 @@ from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.errors import MermaidValidationLimitExceeded
-from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.llm import build_fallback_chain, gemini_3_flash, gemini_3p1_flash_lite
 from src.utils.markdown import extract_block
 from src.utils.mermaid import get_mermaid_reference, validate_mermaid
+
+llm = build_fallback_chain(gemini_3_flash, gemini_3p1_flash_lite)
 
 
 async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
@@ -49,7 +51,7 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> AgentS
         if validation_result.is_valid:
             break
 
-        logger.debug(f"Architect - invalid syntax for check n.{i+1}")
+        logger.debug(f"Architect - invalid syntax for check n.{i + 1}")
 
         messages += [
             AIMessage(text_response),

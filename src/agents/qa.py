@@ -6,7 +6,12 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3_flash as llm
+from src.utils.llm import (
+    build_fallback_chain,
+    gemini_2p5_flash,
+    gemini_3_flash,
+    gemini_3p1_flash_lite,
+)
 from src.utils.middleware import LoggingMiddleware, format_tool_error
 from src.utils.source_context import extract_project_context
 from src.utils.tools import file_tools, run_tests_with_coverage
@@ -37,6 +42,11 @@ all_tools = file_tools + routing_tools + action_tools
 DEFAULT_REVISION_LIMIT = 3
 
 logging_mw = LoggingMiddleware()
+llm_with_tools = build_fallback_chain(
+    gemini_3_flash.bind_tools(all_tools),
+    gemini_2p5_flash.bind_tools(all_tools),
+    gemini_3p1_flash_lite.bind_tools(all_tools),
+)
 
 
 async def quality_assurance(
@@ -74,7 +84,6 @@ async def quality_assurance(
             ),
         ]
 
-    llm_with_tools = llm.bind_tools(all_tools)
     response = await llm_with_tools.ainvoke(messages)
     logger.info("QA agent has replied.")
 

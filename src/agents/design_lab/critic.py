@@ -2,11 +2,11 @@ from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.runtime import Runtime
-from pydantic import BaseModel, Field
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_2p5_flash as llm
+from src.utils.llm import build_fallback_chain, gemini_2p5_flash, gemini_3p1_flash_lite
 
 
 class CriticOutput(BaseModel):
@@ -22,7 +22,11 @@ class CriticOutput(BaseModel):
     )
 
 
-llm_with_structure = llm.with_structured_output(CriticOutput)
+llm_with_structure = build_fallback_chain(
+    gemini_2p5_flash.with_structured_output(CriticOutput),
+    gemini_3p1_flash_lite.with_structured_output(CriticOutput),
+)
+
 
 DEFAULT_REVISION_LIMIT = 3
 

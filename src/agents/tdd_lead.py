@@ -7,7 +7,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3_flash as llm
+from src.utils.llm import build_fallback_chain, gemini_3_flash, gemini_3p1_flash_lite
 from src.utils.source_context import extract_project_context
 
 
@@ -19,10 +19,16 @@ class FileChange(BaseModel):
 
 
 class TDDPlan(BaseModel):
+    thinking: str = Field(
+        description="Your thought process and reasoning behind the tests that you are going to write."
+    )
     files: List[FileChange] = Field(description="List of files to create or update")
 
 
-structured_llm = llm.with_structured_output(TDDPlan)
+llm_with_structure = build_fallback_chain(
+    gemini_3_flash.with_structured_output(TDDPlan),
+    gemini_3p1_flash_lite.with_structured_output(TDDPlan),
+)
 
 
 async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
@@ -46,7 +52,7 @@ async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
         ),
     ]
 
-    plan: TDDPlan = await structured_llm.ainvoke(messages)
+    plan: TDDPlan = await llm_with_structure.ainvoke(messages)
     logger.debug(f"TDD Lead plan: {len(plan.files)} files to write.")
 
     write_tests_to_disk(plan, working_dir)
