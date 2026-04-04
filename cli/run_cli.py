@@ -19,6 +19,8 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style as PromptStyle
 from rich.console import Console
 
+import traceback
+
 from cli.commands import (
     handle_exit,
     handle_list_skills,
@@ -175,6 +177,7 @@ class InteractiveCLI:
                 context=graph_context,
                 stream_mode=["updates", "messages", "custom"],
                 version="v2",
+                subgraphs=True,
             ):
                 chunk: StreamPart
                 match chunk["type"]:
@@ -201,23 +204,25 @@ class InteractiveCLI:
         msg_chunk, metadata = chunk["data"]
         node_name = metadata.get("langgraph_node")
 
-        if node_name and node_name != self.active_node:
-            self.active_node = node_name
+        # if node_name and node_name != self.active_node:
+        #     self.active_node = node_name
 
-        if node_name == SUPERVISOR and msg_chunk.content:
+        # if node_name == SUPERVISOR and msg_chunk.content:
+        #     self.console.print(msg_chunk.text, end="")
+
+        if msg_chunk.text:
             self.console.print(msg_chunk.text, end="")
 
     def _process_update_stream(self, chunk: UpdatesStreamPart) -> None:
         self.status.start()
-        for node_name, update in chunk["data"].items():
-            if len(update) > 1:
-                raise ValueError("You though it's only a single update.")
-            self._process_node_update(node_name, update)
-        
+        for node_name, updates in chunk["data"].items():
+            self._process_node_update(node_name, updates)
 
     def _process_node_update(self, node_name: str, updates: dict[str, Any]):
         """Processes and prints updates from a single workflow node."""
         self.console.print(f"✓ [{node_name}] completed task.")
+        if not updates:
+            return
 
         if "supervisor_phase" in updates:
             self.console.print(f"  ➜ phase: {updates['supervisor_phase']}")
@@ -240,7 +245,7 @@ class InteractiveCLI:
             last_msg = updates["messages"][-1]
             if isinstance(last_msg, AIMessage):
                 if node_name == "Supervisor":
-                    pass
+                    print()
                 elif last_msg.content:
                     self.console.print(
                         f"\nAssistant ({node_name}): {last_msg.content}\n"
@@ -280,6 +285,7 @@ class InteractiveCLI:
             except EOFError:
                 break
             except Exception as e:
+                traceback.print_exc()
                 self.console.print(f"\n❌ [red]Error ({type(e).__name__}):[/red] {e}")
         self.console.print("\n[yellow]Exiting... Goodbye![/yellow]")
 
