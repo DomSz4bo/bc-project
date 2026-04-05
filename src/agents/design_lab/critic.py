@@ -1,12 +1,14 @@
 from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import build_fallback_chain, gemini_2p5_flash, gemini_3p1_flash_lite
+from src.utils.streaming import CustomStreamData
 
 
 class CriticOutput(BaseModel):
@@ -32,6 +34,12 @@ DEFAULT_REVISION_LIMIT = 3
 
 
 async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
+    writer = get_stream_writer()
+    writer(
+        CustomStreamData(
+            "Checking design artifact consistency", "start", {"spinner": "triangle"}
+        )
+    )
     logger.info("Critic node initiated.")
 
     revision_count = state["revision_count"]
@@ -40,6 +48,11 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     )
 
     if revision_count >= revision_limit:
+        writer(
+            CustomStreamData(
+                "Consistency revision limit hit.", "end", {"style": "italic red"}
+            )
+        )
         logger.info("Critic node - revision limit hit.")
         return {
             "critic_verdict": "LIMIT",
@@ -55,7 +68,13 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
         ),
     ]
     response: CriticOutput = await llm_with_structure.ainvoke(messages)
-    logger.info("Critic finished evalauting artifacts.")
+
+    if response.verdict == "PASS":
+        msg = "Design artifacts passed consistency check."
+        writer(CustomStreamData(msg, "end"))
+
+    logger.info(f"Critic finished evalauting artifacts. Verdict: {response.verdict}")
+
     return {
         "critic_verdict": response.verdict,
         "critic_feedback": response.feedback,

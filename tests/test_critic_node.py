@@ -13,7 +13,10 @@ async def test_critic_pass():
     """
     mock_output = CriticOutput(verdict="PASS", feedback=None)
 
-    with patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm:
+    with (
+        patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm,
+        patch("src.agents.design_lab.critic.get_stream_writer") as _,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_output)
 
         state = {
@@ -48,7 +51,10 @@ async def test_critic_fail():
     """
     mock_output = CriticOutput(verdict="FAIL", feedback="Missing step.")
 
-    with patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm:
+    with (
+        patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm,
+        patch("src.agents.design_lab.critic.get_stream_writer") as _,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_output)
 
         state = {
@@ -79,7 +85,10 @@ async def test_critic_limit():
     mock_runtime = MagicMock()
     mock_runtime.context = {"max_diagram_revisions": 3}
 
-    with patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm:
+    with (
+        patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm,
+        patch("src.agents.design_lab.critic.get_stream_writer") as _,
+    ):
         result = await critic(state, mock_runtime)
 
         assert result["critic_verdict"] == "LIMIT"
