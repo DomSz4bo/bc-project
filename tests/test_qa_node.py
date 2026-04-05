@@ -21,7 +21,10 @@ async def test_quality_assurance_revision_limit(mock_runtime):
         "qa_revision_count": 3,
         "qa_messages": [],
     }
-    with patch("src.agents.qa.llm_with_tools") as _:
+    with (
+        patch("src.agents.qa.llm_with_tools") as _,
+        patch("src.agents.qa.get_stream_writer") as _,
+    ):
         result = await quality_assurance(state, mock_runtime)
 
     assert result == {"qa_feedback": "LIMIT"}
@@ -39,6 +42,7 @@ async def test_quality_assurance_initial_messages(mock_runtime):
     with (
         patch("src.agents.qa.llm_with_tools") as mock_llm,
         patch("src.agents.qa.extract_project_context") as mock_extract,
+        patch("src.agents.qa.get_stream_writer") as _,
     ):
         mock_extract.return_value = MagicMock(
             use_case="Use Case",
@@ -68,7 +72,10 @@ async def test_quality_assurance_existing_messages(mock_runtime):
 
     mock_response = AIMessage(content="Next step.")
 
-    with patch("src.agents.qa.llm_with_tools") as mock_llm:
+    with (
+        patch("src.agents.qa.llm_with_tools") as mock_llm,
+        patch("src.agents.qa.get_stream_writer") as _,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
         result = await quality_assurance(state, mock_runtime)
@@ -83,7 +90,11 @@ async def test_quality_assurance_existing_messages(mock_runtime):
 async def test_qa_tool_node_no_messages():
     state = {"qa_messages": []}
 
-    with pytest.raises(ValueError, match="There are no qa_messages"):
+    with (
+        patch("src.agents.qa.llm_with_tools") as _,
+        patch("src.agents.qa.get_stream_writer") as _,
+        pytest.raises(ValueError, match="There are no qa_messages"),
+    ):
         await qa_tool_node(state)
 
 

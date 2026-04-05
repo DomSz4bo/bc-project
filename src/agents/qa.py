@@ -1,5 +1,6 @@
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
+from langgraph.config import get_stream_writer
 from langgraph.prebuilt import ToolNode
 from langgraph.runtime import Runtime
 from loguru import logger
@@ -14,6 +15,7 @@ from src.utils.llm import (
 )
 from src.utils.middleware import LoggingMiddleware, format_tool_error
 from src.utils.source_context import extract_project_context
+from src.utils.streaming import CustomStreamData
 from src.utils.tools import file_tools, run_tests_with_coverage
 
 REJECT_IMPLEMENTATION = "reject_implementation"
@@ -56,6 +58,8 @@ async def quality_assurance(
     The QA node logic.
     Identifies issues in the implementation and either rejects it (via tool) or finishes.
     """
+    writer = get_stream_writer()
+    writer(CustomStreamData("", "start"))
     logger.info("QA node initiated.")
 
     revision_count = state["qa_revision_count"]
