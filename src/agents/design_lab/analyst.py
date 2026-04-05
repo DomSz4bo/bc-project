@@ -1,27 +1,46 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.config import get_stream_writer
 from loguru import logger
 
 from src.graph.state import AgentState
 from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.streaming import CustomStreamData
 
 
 async def analyst(state: AgentState) -> AgentState:
     """
     The Analyst node logic.
     """
+    writer = get_stream_writer()
+    writer(
+        CustomStreamData(
+            "Analyzing the user's intent", type="start", extra={"spinner": "balloon"}
+        )
+    )
     logger.info("Analyst node initiated.")
 
     user_intent_summary = state.get("user_intent_summary")
+    desing_notes = state.get("design_notes")
+
     if not user_intent_summary:
         raise ValueError("No user_intent_summary found in AgentState.")
 
+    message = f"# USER INTENT SUMMARY:<user_intent_summary>\n\n{user_intent_summary}\n</user_intent_summary>"
+    if desing_notes:
+        message = message + (
+            "\n\n## Additional notes and instructions.\n"
+            "Ignore instructions that are not relevant for your task.\n"
+            f"<instructions>\n{desing_notes}\n</instructions>"
+        )
+
     messages = [
         SystemMessage(SYSTEM_PROMPT),
-        HumanMessage(f"USER INTENT SUMMARY:\n\n{user_intent_summary}"),
+        HumanMessage(message),
     ]
 
     response = await llm.ainvoke(messages)
 
+    writer(CustomStreamData("Use Case created.", type="end"))
     logger.info("Analyst completed Use Case generation.")
 
     return {
