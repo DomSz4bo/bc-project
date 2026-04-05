@@ -1,11 +1,15 @@
+from typing import Literal
+
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.config import get_stream_writer
 from langgraph.prebuilt import ToolNode
 from langgraph.runtime import Runtime
+from langgraph.types import Command
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from src.graph.node_names import Nodes
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import (
     build_fallback_chain,
@@ -53,7 +57,7 @@ llm_with_tools = build_fallback_chain(
 
 async def quality_assurance(
     state: AgentState, runtime: Runtime[GraphContext]
-) -> AgentState:
+) -> Command[Literal[Nodes.FINISH_IMPLEMENTATION, Nodes.QA_TOOLS, Nodes.PREPARE_FIX]]:
     """
     The QA node logic.
     Identifies issues in the implementation and either rejects it (via tool) or finishes.
@@ -67,9 +71,9 @@ async def quality_assurance(
 
     if revision_count >= revision_limit:
         logger.warning("QA node - revision limit hit.")
-        return {
-            "qa_feedback": "LIMIT",
-        }
+        return Command(
+            update={"qa_feedback": "LIMIT"}, goto=Nodes.FINISH_IMPLEMENTATION
+        )
 
     if state["qa_messages"]:
         messages = state["qa_messages"]
@@ -89,9 +93,29 @@ async def quality_assurance(
         ]
 
     response = await llm_with_tools.ainvoke(messages)
+
     logger.info("QA agent has replied.")
 
-    return {"qa_messages": messages + [response]}
+    update = {"qa_messages": messages + [response]}
+
+    if not response.tool_calls:
+        return Command(
+            update=update,
+            goto=Nodes.FINISH_IMPLEMENTATION,
+        )
+
+    tool_names = [tc["name"] for tc in response.tool_calls]
+
+    if any(name != REJECT_IMPLEMENTATION for name in tool_names):
+        return Command(
+            update=update,
+            goto=Nodes.QA_TOOLS,
+        )
+
+    return Command(
+        update=update,
+        goto=Nodes.PREPARE_FIX,
+    )
 
 
 async def qa_tool_node(state: AgentState) -> AgentState:

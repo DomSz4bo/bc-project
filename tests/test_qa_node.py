@@ -25,7 +25,8 @@ async def test_quality_assurance_revision_limit(mock_runtime):
         patch("src.agents.qa.llm_with_tools") as _,
         patch("src.agents.qa.get_stream_writer") as _,
     ):
-        result = await quality_assurance(state, mock_runtime)
+        command = await quality_assurance(state, mock_runtime)
+        result = command.update
 
     assert result == {"qa_feedback": "LIMIT"}
 
@@ -53,7 +54,8 @@ async def test_quality_assurance_initial_messages(mock_runtime):
 
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
-        result = await quality_assurance(state, mock_runtime)
+        command = await quality_assurance(state, mock_runtime)
+        result = command.update
 
         assert "qa_messages" in result
         assert len(result["qa_messages"]) == 3
@@ -78,7 +80,8 @@ async def test_quality_assurance_existing_messages(mock_runtime):
     ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
-        result = await quality_assurance(state, mock_runtime)
+        command = await quality_assurance(state, mock_runtime)
+        result = command.update
 
         assert "qa_messages" in result
         assert len(result["qa_messages"]) == 3

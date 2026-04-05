@@ -15,7 +15,7 @@ from src.agents import (
     supervisor,
     tdd_lead,
 )
-from src.agents.qa import REJECT_IMPLEMENTATION, qa_tool_node
+from src.agents.qa import qa_tool_node
 from src.agents.supervisor import (
     DESIGN_HANDOFF,
     IMPLEMENT_HANDOFF,
@@ -53,25 +53,6 @@ async def supervisor_router(
         return "implement"
 
     return "end"
-
-
-async def qa_router(
-    state: AgentState,
-) -> Literal["fix", "tools", "done"]:
-    feedback = state["qa_feedback"]
-    if feedback and feedback == "LIMIT":
-        return "done"
-
-    last_message = state["qa_messages"][-1]
-    if not last_message.tool_calls:
-        return "done"
-
-    tool_names = [tc["name"] for tc in last_message.tool_calls]
-
-    if any(name != REJECT_IMPLEMENTATION for name in tool_names):
-        return "tools"
-
-    return "fix"
 
 
 async def critic_router(state: AgentState) -> Literal["fix", "done"]:
@@ -133,16 +114,6 @@ def create_graph() -> CompiledStateGraph:
     builder.add_edge(Nodes.SCAFFOLDER, Nodes.TDD)
     builder.add_edge(Nodes.TDD, Nodes.ENGINEER)
     builder.add_edge(Nodes.ENGINEER, Nodes.QA)
-
-    builder.add_conditional_edges(
-        Nodes.QA,
-        qa_router,
-        {
-            "fix": Nodes.PREPARE_FIX,
-            "tools": Nodes.QA_TOOLS,
-            "done": Nodes.FINISH_IMPLEMENTATION,
-        },
-    )
     builder.add_edge(Nodes.QA_TOOLS, Nodes.QA)
     builder.add_edge(Nodes.PREPARE_FIX, Nodes.ENGINEER)
     builder.add_edge(Nodes.FINISH_IMPLEMENTATION, Nodes.SUPERVISOR)
