@@ -71,7 +71,7 @@ async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     The Supervisor node logic.
     """
     phase = state.get("supervisor_phase", "INTAKE")
-    logger.debug("Supervisor initiated in mode={}.", phase)
+    logger.info("Supervisor initiated in mode={}.", phase)
 
     if phase == "INTAKE":
         system_prompt = SYSTEM_PROMPT.format(phase_instructions=INTAKE_ROLE)
@@ -98,6 +98,7 @@ async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
     response = await llm_with_tools.ainvoke(messages)
 
+    logger.info("Supervisor finished turn.")
     logged_reply = response.text[:15] + ("..." if len(response.text) > 15 else "")
     logger.debug(f"Supervisor replied: {logged_reply}")
 

@@ -95,7 +95,7 @@ async def qa_tool_node(state: AgentState) -> AgentState:
     Wraps a ToolNode to achieve custom state update behaviour.
     Executes the QA's tool calls.
     """
-    logger.debug("QA tool node initiated.")
+    logger.info("QA tool node initiated.")
     qa_messages = state.get("qa_messages")
     if not qa_messages:
         raise ValueError("There are no qa_messages")

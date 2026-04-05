@@ -36,7 +36,7 @@ async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
     The TDD Lead node logic.
     Generates a test suite and updates source code stubs based on the Use Case and Sequence Diagram.
     """
-    logger.debug("TDD Lead initiated.")
+    logger.info("TDD Lead initiated.")
 
     working_dir = runtime.context.get("working_directory")
     project_context = extract_project_context(state, working_dir)
@@ -56,7 +56,7 @@ async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
     logger.debug(f"TDD Lead plan: {len(plan.files)} files to write.")
 
     write_tests_to_disk(plan, working_dir)
-    logger.debug("TDD plan written to disk.")
+    logger.info("TDD plan written to disk.")
 
     return {}
 

@@ -13,12 +13,14 @@ from src.utils.mermaid import get_mermaid_reference, validate_mermaid
 llm = build_fallback_chain(gemini_3_flash, gemini_3p1_flash_lite)
 
 
-async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> Command[Literal[Nodes.SUPERVISOR, Nodes.CRITIC]]:
+async def architect(
+    state: AgentState, runtime: Runtime[GraphContext]
+) -> Command[Literal[Nodes.SUPERVISOR, Nodes.CRITIC]]:
     """
     The Architect node logic.
     Translates a Use Case into a Mermaid.js Sequence Diagram.
     """
-    logger.debug("Architect node initiated.")
+    logger.info("Architect node initiated.")
 
     use_case = state.get("use_case")
     if not use_case:
@@ -31,7 +33,7 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> Comman
 
     critic_verdict = state.get("critic_verdict")
     if critic_verdict is not None and critic_verdict == "FAIL":
-        logger.debug("Architect is in FIX mode based on Critic feedback.")
+        logger.info("Architect is in FIX mode based on Critic feedback.")
         critic_feedback = state.get("critic_feedback")
         previous_diagram = state.get("sequence_diagram")
         messages += [
@@ -53,7 +55,7 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> Comman
         if validation_result.is_valid:
             break
 
-        logger.debug(f"Architect - invalid syntax for check n.{i + 1}")
+        logger.info(f"Architect - invalid syntax for check n.{i + 1}")
 
         messages += [
             AIMessage(text_response),
@@ -63,11 +65,15 @@ async def architect(state: AgentState, runtime: Runtime[GraphContext]) -> Comman
         ]
 
     if validation_result.is_valid:
-        logger.debug("Architect completed Sequence Diagram generation.")
+        logger.info("Architect completed Sequence Diagram generation.")
         return Command(
             goto=Nodes.CRITIC,
             update={"sequence_diagram": text_response},
         )
+
+    logger.info(
+        f"Architect failed to generate valid diagram within validation limit: {validation_limit}."
+    )
 
     last_msg = state["messages"][-1]
     if not isinstance(last_msg, ToolMessage):

@@ -32,7 +32,7 @@ DEFAULT_REVISION_LIMIT = 3
 
 
 async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
-    logger.debug("Critic node initiated.")
+    logger.info("Critic node initiated.")
 
     revision_count = state["revision_count"]
     revision_limit = runtime.context.get(
@@ -40,7 +40,7 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     )
 
     if revision_count >= revision_limit:
-        logger.debug("Critic node - revision limit hit.")
+        logger.info("Critic node - revision limit hit.")
         return {
             "critic_verdict": "LIMIT",
             "critic_feedback": None,
@@ -55,7 +55,7 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
         ),
     ]
     response: CriticOutput = await llm_with_structure.ainvoke(messages)
-    logger.debug("Critic finished evalauting artifacts.")
+    logger.info("Critic finished evalauting artifacts.")
     return {
         "critic_verdict": response.verdict,
         "critic_feedback": response.feedback,

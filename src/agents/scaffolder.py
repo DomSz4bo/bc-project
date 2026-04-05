@@ -38,7 +38,7 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     The Scaffolder node logic.
     Translates the Sequence Diagram and Use Case into a project scaffold.
     """
-    logger.debug("Scaffolder node initiated.")
+    logger.info("Scaffolder node initiated.")
 
     use_case = state.get("use_case")
     sequence_diagram = state.get("sequence_diagram")
@@ -62,7 +62,7 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     logger.debug(f"Scaffolder plan:\n{plan}")
 
     write_scaffold_to_disk(plan, src_dir)
-    logger.debug("Scaffold written to disk.")
+    logger.info("Scaffold written to disk.")
 
     return {}
 

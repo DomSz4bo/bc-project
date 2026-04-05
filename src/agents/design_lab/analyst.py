@@ -9,7 +9,7 @@ async def analyst(state: AgentState) -> AgentState:
     """
     The Analyst node logic.
     """
-    logger.debug("Analyst node initiated.")
+    logger.info("Analyst node initiated.")
 
     user_intent_summary = state.get("user_intent_summary")
     if not user_intent_summary:
@@ -22,7 +22,7 @@ async def analyst(state: AgentState) -> AgentState:
 
     response = await llm.ainvoke(messages)
 
-    logger.debug("Analyst completed Use Case generation.")
+    logger.info("Analyst completed Use Case generation.")
 
     return {
         "use_case": response.text,

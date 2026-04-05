@@ -20,7 +20,7 @@ async def engineer(
     Engineer agent.
     Writes the implementation for the designed system and tests.
     """
-    logger.debug("Engineer node initiated.")
+    logger.info("Engineer node initiated.")
 
     context = extract_project_context(state, runtime.context.get("working_directory"))
 
@@ -69,7 +69,7 @@ async def engineer(
         )
         await engineer_agent.ainvoke({"messages": [input_message]}, config=config)
 
-    logger.debug("Engineer finished work.")
+    logger.info("Engineer finished work.")
 
     return {}
 
