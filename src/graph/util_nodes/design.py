@@ -1,4 +1,5 @@
 from langchain_core.messages import ToolMessage
+from loguru import logger
 
 from src.agents.supervisor import DESIGN_HANDOFF
 from src.graph.state import AgentState
@@ -74,9 +75,13 @@ STYLE RULES:
 [SEQUENCE DIAGRAM]
 {diagram}
 """
-    # TODO exception handle
-    response = await gemma_3_27b.ainvoke(prompt)
-    summary = response.text
+    try:
+        response = await gemma_3_27b.ainvoke(prompt)
+        summary = response.text
+    except Exception as error:
+        logger.warning("Failed to summarize design output.")
+        logger.debug(f"Error ({type(error).__name__}) w/ message: {str(error)}")
+        summary = "The design team successfully produced a Use case and Mermaid Sequence diagram."
 
     return {
         "messages": [
