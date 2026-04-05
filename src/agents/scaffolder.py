@@ -1,12 +1,14 @@
 from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.streaming import CustomStreamData
 
 
 class Component(BaseModel):
@@ -38,6 +40,12 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     The Scaffolder node logic.
     Translates the Sequence Diagram and Use Case into a project scaffold.
     """
+    writer = get_stream_writer()
+    writer(
+        CustomStreamData(
+            "Creating project structure", "start", {"spinner": "growVertical"}
+        )
+    )
     logger.info("Scaffolder node initiated.")
 
     use_case = state.get("use_case")
@@ -62,6 +70,8 @@ async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     logger.debug(f"Scaffolder plan:\n{plan}")
 
     write_scaffold_to_disk(plan, src_dir)
+
+    writer(CustomStreamData("Project structure created.", "end"))
     logger.info("Scaffold written to disk.")
 
     return {}

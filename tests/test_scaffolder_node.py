@@ -42,7 +42,10 @@ sequenceDiagram
         components=[Component(class_name="System", file_name="system")]
     )
 
-    with patch("src.agents.scaffolder.structured_llm") as mock_llm:
+    with (
+        patch("src.agents.scaffolder.structured_llm") as mock_llm,
+        patch("src.agents.scaffolder.get_stream_writer") as _,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_plan)
 
         await scaffolder(state, mock_runtime)
@@ -70,7 +73,11 @@ async def test_scaffolder_none_data():
     }
     mock_runtime = MagicMock()
     mock_runtime.context = {"working_directory": Path(".")}
-    with pytest.raises(ValueError, match="Missing use_case or sequence_diagram"):
+    with (
+        patch("src.agents.scaffolder.structured_llm") as _,
+        patch("src.agents.scaffolder.get_stream_writer") as _,
+        pytest.raises(ValueError, match="Missing use_case or sequence_diagram"),
+    ):
         await scaffolder(state, mock_runtime)
 
 
@@ -79,5 +86,9 @@ async def test_scaffolder_missing_keys():
     state = {}
     mock_runtime = MagicMock()
     mock_runtime.context = {"working_directory": Path(".")}
-    with pytest.raises(ValueError, match="Missing use_case or sequence_diagram"):
+    with (
+        patch("src.agents.scaffolder.structured_llm") as _,
+        patch("src.agents.scaffolder.get_stream_writer") as _,
+        pytest.raises(ValueError, match="Missing use_case or sequence_diagram"),
+    ):
         await scaffolder(state, mock_runtime)
