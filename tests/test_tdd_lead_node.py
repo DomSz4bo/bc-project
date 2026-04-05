@@ -41,7 +41,10 @@ async def test_tdd_lead_logic(tmp_path):
         ],
     )
 
-    with patch("src.agents.tdd_lead.llm_with_structure") as mock_llm:
+    with (
+        patch("src.agents.tdd_lead.llm_with_structure") as mock_llm,
+        patch("src.agents.tdd_lead.get_stream_writer") as _,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_plan)
 
         await tdd_lead(state, mock_runtime)
@@ -63,6 +66,9 @@ async def test_tdd_lead_missing_data():
     state: AgentState = {"use_case": None, "sequence_diagram": None, "messages": []}
     mock_runtime = MagicMock()
     mock_runtime.context = {"working_directory": Path(".")}
-    with patch("src.agents.tdd_lead.llm_with_structure") as _:
-        with pytest.raises(KeyError, match="No use_case found in state."):
-            await tdd_lead(state, mock_runtime)
+    with (
+        patch("src.agents.tdd_lead.llm_with_structure") as _,
+        patch("src.agents.tdd_lead.get_stream_writer") as _,
+        pytest.raises(KeyError, match="No use_case found in state."),
+    ):
+        await tdd_lead(state, mock_runtime)

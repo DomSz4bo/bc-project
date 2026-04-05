@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import build_fallback_chain, gemini_3_flash, gemini_3p1_flash_lite
 from src.utils.source_context import extract_project_context
+from src.utils.streaming import CustomStreamData
 
 
 class FileChange(BaseModel):
@@ -36,6 +38,8 @@ async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
     The TDD Lead node logic.
     Generates a test suite and updates source code stubs based on the Use Case and Sequence Diagram.
     """
+    writer = get_stream_writer()
+    writer(CustomStreamData("Writing tests", "start"))
     logger.info("TDD Lead initiated.")
 
     working_dir = runtime.context.get("working_directory")
@@ -56,6 +60,8 @@ async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
     logger.debug(f"TDD Lead plan: {len(plan.files)} files to write.")
 
     write_tests_to_disk(plan, working_dir)
+    
+    writer(CustomStreamData("Initial tests written.", "end"))
     logger.info("TDD plan written to disk.")
 
     return {}
