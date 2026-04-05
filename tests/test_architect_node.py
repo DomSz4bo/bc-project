@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -20,8 +20,12 @@ async def test_architect_generation():
     John-->>-Alice: I feel great!```"""
     mock_response = AIMessage(content=mock_diagram)
 
-    with patch("src.agents.design_lab.architect.llm") as mock_llm:
+    with (
+        patch("src.agents.design_lab.architect.llm") as mock_llm,
+        patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_writer.return_value = MagicMock(return_value=None)
 
         state = {
             "use_case": "# USE CASE: Login System\n...",
@@ -30,7 +34,8 @@ async def test_architect_generation():
         mock_runtime = MagicMock()
         mock_runtime.context = {"mmd_syntax_validation_limit": 3}
 
-        result = await architect(state, mock_runtime)
+        command = await architect(state, mock_runtime)
+        result = command.update
 
         assert "sequence_diagram" in result
         assert result["sequence_diagram"] == mock_diagram
@@ -58,8 +63,12 @@ sequenceDiagram
     John-->>-Alice: I feel great!```"""
     mock_response = AIMessage(content=mock_diagram)
 
-    with patch("src.agents.design_lab.architect.llm") as mock_llm:
+    with (
+        patch("src.agents.design_lab.architect.llm") as mock_llm,
+        patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_writer.return_value = MagicMock(return_value=None)
 
         state = {
             "use_case": "# USE CASE: Login System\n...",
@@ -76,7 +85,8 @@ sequenceDiagram
         mock_runtime = MagicMock()
         mock_runtime.context = {}
 
-        result = await architect(state, mock_runtime)
+        command = await architect(state, mock_runtime)
+        result = command.update
 
         assert result["sequence_diagram"] == mock_diagram
 
@@ -93,8 +103,13 @@ async def test_architect_missing_use_case():
     Verify the architect fails if no use case is provided.
     """
     mock_response = AIMessage(content="Nothing")
-    with patch("src.agents.design_lab.architect.llm") as mock_llm:
+    with (
+        patch("src.agents.design_lab.architect.llm") as mock_llm,
+        patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_writer.return_value = MagicMock(return_value=None)
+
         state = {}
         mock_runtime = MagicMock()
         mock_runtime.context = {}
@@ -118,9 +133,11 @@ async def test_architect_fix_syntax():
     with (
         patch("src.agents.design_lab.architect.llm") as mock_llm,
         patch("src.agents.design_lab.architect.validate_mermaid") as mock_validation,
+        patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
     ):
         mock_llm.ainvoke = AsyncMock(side_effect=mock_responses)
         mock_validation.side_effect = mock_validations
+        mock_writer.return_value = MagicMock(return_value=None)
 
         state = {
             "use_case": "# USE CASE: Login System\n...",
@@ -129,7 +146,8 @@ async def test_architect_fix_syntax():
         mock_runtime = MagicMock()
         mock_runtime.context = {"mmd_syntax_validation_limit": 3}
 
-        result = await architect(state, mock_runtime)
+        command = await architect(state, mock_runtime)
+        result = command.update
 
         assert result["sequence_diagram"] == mock_responses[1].content
 

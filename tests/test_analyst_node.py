@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -14,8 +14,12 @@ async def test_analyst_generation():
     mock_use_case = "# USE CASE: Login System\n..."
     mock_response = AIMessage(content=mock_use_case)
 
-    with patch("src.agents.design_lab.analyst.llm") as mock_llm:
+    with (
+        patch("src.agents.design_lab.analyst.llm") as mock_llm,
+        patch("src.agents.design_lab.analyst.get_stream_writer") as mock_writer,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_writer.return_value = MagicMock(return_value=None)
 
         state = {
             "user_intent_summary": "I want a JWT login system.",
@@ -43,8 +47,12 @@ async def test_analyst_missing_summary():
     """
     mock_response = AIMessage(content="Nothing.")
 
-    with patch("src.agents.design_lab.analyst.llm") as mock_llm:
+    with (
+        patch("src.agents.design_lab.analyst.llm") as mock_llm,
+        patch("src.agents.design_lab.analyst.get_stream_writer") as mock_writer,
+    ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_writer.return_value = MagicMock(return_value=None)
 
         state = {}
         with pytest.raises(ValueError, match="No user_intent_summary"):

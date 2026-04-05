@@ -16,6 +16,12 @@ def mock_runtime():
 
 
 @pytest.fixture
+def mock_config():
+    config = MagicMock()
+    return config
+
+
+@pytest.fixture
 def mock_context():
     context = MagicMock()
     context.use_case = "Test Use Case"
@@ -26,7 +32,7 @@ def mock_context():
 
 
 @pytest.mark.asyncio
-async def test_engineer_normal_execution(mock_runtime, mock_context):
+async def test_engineer_normal_execution(mock_runtime, mock_context, mock_config):
     state = {}
 
     with (
@@ -39,7 +45,6 @@ async def test_engineer_normal_execution(mock_runtime, mock_context):
         ) as mock_load_tools,
         patch("src.agents.engineer.create_agent") as mock_create_agent,
         patch("src.agents.engineer.run_tests", "mock_run_tests_tool"),
-        patch("src.agents.engineer.llm", "mock_llm"),
     ):
         mock_session_context = AsyncMock()
         mock_client = MagicMock()
@@ -51,14 +56,13 @@ async def test_engineer_normal_execution(mock_runtime, mock_context):
         mock_agent = AsyncMock()
         mock_create_agent.return_value = mock_agent
 
-        result = await engineer(state, mock_runtime)
+        result = await engineer(state, mock_runtime, mock_config)
 
         assert result == {}
         mock_extract.assert_called_once_with(state, Path("."))
 
         mock_create_agent.assert_called_once()
         args, kwargs = mock_create_agent.call_args
-        assert args[0] == "mock_llm"
         assert len(args[1]) == 2
         assert kwargs["system_prompt"] == SYSTEM_PROMPT
         assert kwargs["context_schema"] == GraphContext
@@ -80,7 +84,7 @@ async def test_engineer_normal_execution(mock_runtime, mock_context):
 
 
 @pytest.mark.asyncio
-async def test_engineer_with_qa_feedback(mock_runtime, mock_context):
+async def test_engineer_with_qa_feedback(mock_runtime, mock_context, mock_config):
     state = {"qa_feedback": "Tests failed on line 42"}
 
     with (
@@ -97,7 +101,7 @@ async def test_engineer_with_qa_feedback(mock_runtime, mock_context):
         mock_agent = AsyncMock()
         mock_create_agent.return_value = mock_agent
 
-        await engineer(state, mock_runtime)
+        await engineer(state, mock_runtime, mock_config)
 
         mock_agent.ainvoke.assert_called_once()
         call_args = mock_agent.ainvoke.call_args[0][0]

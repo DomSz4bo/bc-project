@@ -21,8 +21,8 @@ async def test_quality_assurance_revision_limit(mock_runtime):
         "qa_revision_count": 3,
         "qa_messages": [],
     }
-
-    result = await quality_assurance(state, mock_runtime)
+    with patch("src.agents.qa.llm_with_tools") as _:
+        result = await quality_assurance(state, mock_runtime)
 
     assert result == {"qa_feedback": "LIMIT"}
 
@@ -37,7 +37,7 @@ async def test_quality_assurance_initial_messages(mock_runtime):
     mock_response = AIMessage(content="I will test this.")
 
     with (
-        patch("src.agents.qa.llm") as mock_llm,
+        patch("src.agents.qa.llm_with_tools") as mock_llm,
         patch("src.agents.qa.extract_project_context") as mock_extract,
     ):
         mock_extract.return_value = MagicMock(
@@ -47,7 +47,7 @@ async def test_quality_assurance_initial_messages(mock_runtime):
             test_files_context="Test Files",
         )
 
-        mock_llm.bind_tools.return_value.ainvoke = AsyncMock(return_value=mock_response)
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
         result = await quality_assurance(state, mock_runtime)
 
@@ -68,8 +68,8 @@ async def test_quality_assurance_existing_messages(mock_runtime):
 
     mock_response = AIMessage(content="Next step.")
 
-    with patch("src.agents.qa.llm") as mock_llm:
-        mock_llm.bind_tools.return_value.ainvoke = AsyncMock(return_value=mock_response)
+    with patch("src.agents.qa.llm_with_tools") as mock_llm:
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
         result = await quality_assurance(state, mock_runtime)
 

@@ -47,7 +47,10 @@ async def test_supervisor_intake_flow(mock_runtime):
     """
     mock_response = AIMessage(content="What kind of authentication do you need?")
 
-    with patch("src.agents.supervisor.llm") as mock_llm:
+    with (
+        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.get_stream_writer") as _,
+    ):
         mock_bound_llm = AsyncMock()
         mock_llm.bind_tools.return_value = mock_bound_llm
         mock_bound_llm.ainvoke.return_value = mock_response
@@ -80,7 +83,10 @@ async def test_supervisor_approval_flow(mock_runtime):
     use_case = "UC: Login Flow"
     sq_diagram = "sequenceDiagram ..."
 
-    with patch("src.agents.supervisor.llm") as mock_llm:
+    with (
+        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.get_stream_writer") as _,
+    ):
         mock_bound_llm = AsyncMock()
         mock_llm.bind_tools.return_value = mock_bound_llm
         mock_bound_llm.ainvoke.return_value = mock_response
@@ -114,7 +120,10 @@ async def test_supervisor_post_implementation_flow_no_skills(mock_runtime_no_ski
     """
     mock_response = AIMessage(content="The implementation is complete. Let's review.")
 
-    with patch("src.agents.supervisor.llm") as mock_llm:
+    with (
+        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.get_stream_writer") as _,
+    ):
         mock_bound_llm = AsyncMock()
         mock_llm.bind_tools.return_value = mock_bound_llm
         mock_bound_llm.ainvoke.return_value = mock_response
@@ -144,7 +153,10 @@ async def test_supervisor_post_implementation_with_skills(mock_runtime_with_skil
     """
     mock_response = AIMessage(content="I see the skills.")
 
-    with patch("src.agents.supervisor.llm") as mock_llm:
+    with (
+        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.get_stream_writer") as _,
+    ):
         mock_bound_llm = AsyncMock()
         mock_llm.bind_tools.return_value = mock_bound_llm
         mock_bound_llm.ainvoke.return_value = mock_response
@@ -178,7 +190,10 @@ async def test_supervisor_tool_handoff_call(mock_runtime):
     }
     mock_response = AIMessage(content="", tool_calls=[tool_call])
 
-    with patch("src.agents.supervisor.llm") as mock_llm:
+    with (
+        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.get_stream_writer") as _,
+    ):
         mock_bound_llm = AsyncMock()
         mock_llm.bind_tools.return_value = mock_bound_llm
         mock_bound_llm.ainvoke.return_value = mock_response
