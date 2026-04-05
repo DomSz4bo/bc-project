@@ -21,6 +21,7 @@ from src.agents.supervisor import (
     IMPLEMENT_HANDOFF,
     supervisor_tool_node,
 )
+from src.graph.node_names import Nodes
 from src.graph.state import AgentState, GraphContext
 from src.graph.util_nodes import (
     finish_design_node,
@@ -31,22 +32,6 @@ from src.graph.util_nodes import (
 )
 
 set_verbose(True)
-
-SUPERVISOR = "Supervisor"
-ANALYST = "Analyst"
-ARCHITECT = "Architect"
-CRITIC = "Critic"
-SCAFFOLDER = "Scaffolder"
-TDD = "TDD Lead"
-QA = "Quality assurance"
-ENGINEER = "Engineer"
-TOOLS = "tools"
-QA_TOOLS = "qa_tools"
-PREPARE_DESIGN = "PrepareDesign"
-FINISH_DESIGN = "FinishDesign"
-PREPARE_IMPLEMENTATION = "PrepareImplementation"
-FINISH_IMPLEMENTATION = "FinishImplementation"
-PREPARE_FIX = "PrepareFix"
 
 
 async def supervisor_router(
@@ -104,58 +89,63 @@ def create_graph() -> CompiledStateGraph:
     """
     builder = StateGraph(AgentState, GraphContext)
 
-    builder.add_node(SUPERVISOR, supervisor)
-    builder.add_node(ANALYST, analyst)
-    builder.add_node(ARCHITECT, architect)
-    builder.add_node(CRITIC, critic)
-    builder.add_node(SCAFFOLDER, scaffolder)
-    builder.add_node(TDD, tdd_lead)
-    builder.add_node(ENGINEER, engineer)
-    builder.add_node(QA, quality_assurance)
-    builder.add_node(TOOLS, supervisor_tool_node)
-    builder.add_node(QA_TOOLS, qa_tool_node)
-    builder.add_node(PREPARE_DESIGN, prepare_design_node)
-    builder.add_node(FINISH_DESIGN, finish_design_node)
-    builder.add_node(PREPARE_IMPLEMENTATION, prepare_implementation_node)
-    builder.add_node(FINISH_IMPLEMENTATION, finish_implementation_node)
-    builder.add_node(PREPARE_FIX, prepare_fix_node)
+    builder.add_node(Nodes.SUPERVISOR, supervisor)
+    builder.add_node(Nodes.ANALYST, analyst)
+    builder.add_node(Nodes.ARCHITECT, architect)
+    builder.add_node(Nodes.CRITIC, critic)
+    builder.add_node(Nodes.SCAFFOLDER, scaffolder)
+    builder.add_node(Nodes.TDD, tdd_lead)
+    builder.add_node(Nodes.ENGINEER, engineer)
+    builder.add_node(Nodes.QA, quality_assurance)
+    builder.add_node(Nodes.TOOLS, supervisor_tool_node)
+    builder.add_node(Nodes.QA_TOOLS, qa_tool_node)
+    builder.add_node(Nodes.PREPARE_DESIGN, prepare_design_node)
+    builder.add_node(Nodes.FINISH_DESIGN, finish_design_node)
+    builder.add_node(Nodes.PREPARE_IMPLEMENTATION, prepare_implementation_node)
+    builder.add_node(Nodes.FINISH_IMPLEMENTATION, finish_implementation_node)
+    builder.add_node(Nodes.PREPARE_FIX, prepare_fix_node)
 
-    builder.set_entry_point(SUPERVISOR)
+    builder.set_entry_point(Nodes.SUPERVISOR)
     builder.add_conditional_edges(
-        SUPERVISOR,
+        Nodes.SUPERVISOR,
         supervisor_router,
         {
-            "design": PREPARE_DESIGN,
-            "implement": PREPARE_IMPLEMENTATION,
-            "tools": TOOLS,
+            "design": Nodes.PREPARE_DESIGN,
+            "implement": Nodes.PREPARE_IMPLEMENTATION,
+            "tools": Nodes.TOOLS,
             "end": END,
         },
     )
-    builder.add_edge(TOOLS, SUPERVISOR)
+    builder.add_edge(Nodes.TOOLS, Nodes.SUPERVISOR)
 
     # Design lab
-    builder.add_edge(PREPARE_DESIGN, ANALYST)
-    builder.add_edge(ANALYST, ARCHITECT)
-    builder.add_edge(ARCHITECT, CRITIC)
+    builder.add_edge(Nodes.PREPARE_DESIGN, Nodes.ANALYST)
+    builder.add_edge(Nodes.ANALYST, Nodes.ARCHITECT)
     builder.add_conditional_edges(
-        CRITIC, critic_router, {"fix": ARCHITECT, "done": FINISH_DESIGN}
+        Nodes.CRITIC,
+        critic_router,
+        {"fix": Nodes.ARCHITECT, "done": Nodes.FINISH_DESIGN},
     )
-    builder.add_edge(FINISH_DESIGN, SUPERVISOR)
+    builder.add_edge(Nodes.FINISH_DESIGN, Nodes.SUPERVISOR)
 
     # Implementation lab
-    builder.add_edge(PREPARE_IMPLEMENTATION, SCAFFOLDER)
-    builder.add_edge(SCAFFOLDER, TDD)
-    builder.add_edge(TDD, ENGINEER)
-    builder.add_edge(ENGINEER, QA)
+    builder.add_edge(Nodes.PREPARE_IMPLEMENTATION, Nodes.SCAFFOLDER)
+    builder.add_edge(Nodes.SCAFFOLDER, Nodes.TDD)
+    builder.add_edge(Nodes.TDD, Nodes.ENGINEER)
+    builder.add_edge(Nodes.ENGINEER, Nodes.QA)
 
     builder.add_conditional_edges(
-        QA,
+        Nodes.QA,
         qa_router,
-        {"fix": PREPARE_FIX, "tools": QA_TOOLS, "done": FINISH_IMPLEMENTATION},
+        {
+            "fix": Nodes.PREPARE_FIX,
+            "tools": Nodes.QA_TOOLS,
+            "done": Nodes.FINISH_IMPLEMENTATION,
+        },
     )
-    builder.add_edge(QA_TOOLS, QA)
-    builder.add_edge(PREPARE_FIX, ENGINEER)
-    builder.add_edge(FINISH_IMPLEMENTATION, SUPERVISOR)
+    builder.add_edge(Nodes.QA_TOOLS, Nodes.QA)
+    builder.add_edge(Nodes.PREPARE_FIX, Nodes.ENGINEER)
+    builder.add_edge(Nodes.FINISH_IMPLEMENTATION, Nodes.SUPERVISOR)
 
     # Graph compilation
     checkpointer = InMemorySaver()
