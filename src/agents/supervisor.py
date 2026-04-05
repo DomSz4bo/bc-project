@@ -1,5 +1,6 @@
 from langchain.tools import tool
 from langchain_core.messages import SystemMessage
+from langgraph.config import get_stream_writer
 from langgraph.prebuilt import ToolNode
 from langgraph.runtime import Runtime
 from loguru import logger
@@ -8,6 +9,7 @@ from pydantic import BaseModel, Field
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3p1_flash_lite as llm
 from src.utils.middleware import LoggingMiddleware, format_tool_error
+from src.utils.streaming import CustomStreamData
 from src.utils.tools import (
     activate_skill,
     file_tools,
@@ -30,7 +32,7 @@ class DesignInput(BaseModel):
         default=None,
         description=(
             "Optional: Specific instructions from the user for the Design Lab members ",
-            "(e.g., 'Do not use mermaid critical blocks in the diagram.')",
+            "(e.g., 'Do not use mermaid critical blocks in the diagram.', 'Use activations in the diagram.')",
         ),
     )
 
@@ -71,7 +73,14 @@ async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
     The Supervisor node logic.
     """
     phase = state.get("supervisor_phase", "INTAKE")
+    writer = get_stream_writer()
+
     logger.info("Supervisor initiated in mode={}.", phase)
+    writer(
+        CustomStreamData(
+            "Supervisor is thinking...", type="start", extra={"spinner": "layer"}
+        )
+    )
 
     if phase == "INTAKE":
         system_prompt = SYSTEM_PROMPT.format(phase_instructions=INTAKE_ROLE)
