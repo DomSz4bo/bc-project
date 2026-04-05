@@ -3,6 +3,7 @@ from langchain.agents.middleware import ModelFallbackMiddleware, ModelRetryMiddl
 from langchain.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_mcp_adapters.tools import load_mcp_tools
+from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 from loguru import logger
 
@@ -10,6 +11,7 @@ from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash, gemini_3p1_flash_lite
 from src.utils.middleware import LoggingMiddleware, ToolErrorMiddleware
 from src.utils.source_context import extract_project_context
+from src.utils.streaming import CustomStreamData
 from src.utils.tools import get_mcp_client, run_tests
 
 
@@ -20,6 +22,8 @@ async def engineer(
     Engineer agent.
     Writes the implementation for the designed system and tests.
     """
+    writer = get_stream_writer()
+    writer(CustomStreamData("Engineer is working on the implementation", "start"))
     logger.info("Engineer node initiated.")
 
     context = extract_project_context(state, runtime.context.get("working_directory"))
@@ -69,6 +73,7 @@ async def engineer(
         )
         await engineer_agent.ainvoke({"messages": [input_message]}, config=config)
 
+    writer(CustomStreamData("Implementation written.", "end"))
     logger.info("Engineer finished work.")
 
     return {}

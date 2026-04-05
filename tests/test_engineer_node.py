@@ -45,6 +45,7 @@ async def test_engineer_normal_execution(mock_runtime, mock_context, mock_config
         ) as mock_load_tools,
         patch("src.agents.engineer.create_agent") as mock_create_agent,
         patch("src.agents.engineer.run_tests", "mock_run_tests_tool"),
+        patch("src.agents.engineer.get_stream_writer") as _,
     ):
         mock_session_context = AsyncMock()
         mock_client = MagicMock()
@@ -92,6 +93,7 @@ async def test_engineer_with_qa_feedback(mock_runtime, mock_context, mock_config
         patch("src.agents.engineer.get_mcp_client") as mock_get_client,
         patch("src.agents.engineer.load_mcp_tools", new_callable=AsyncMock),
         patch("src.agents.engineer.create_agent") as mock_create_agent,
+        patch("src.agents.engineer.get_stream_writer") as _,
     ):
         mock_session_context = AsyncMock()
         mock_client = MagicMock()
