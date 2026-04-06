@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
-from cli.utils import save_to_json, serialize_snapshot
+from loguru import logger
+
+from cli.utils import deserialize_values, save_to_json, serialize_snapshot
 
 if TYPE_CHECKING:
     from cli.run_cli import InteractiveCLI
@@ -62,5 +65,54 @@ async def handle_reload_skills(cli: InteractiveCLI, *args) -> bool:
 
 
 async def handle_load_state(cli: InteractiveCLI, *args) -> bool:
-    """Loads initial state of the workflow."""
-    pass
+    """Loads a saved state from a JSON file into the graph."""
+    if not args:
+        cli.console.print(
+            "  [red]Error:[/red] Please provide the path to the state JSON file."
+        )
+        cli.console.print(
+            "  Usage: /load <filename_or_path>   [ state_idx (for history file) ]"
+        )
+        return False
+
+    filename: str = args[0]
+    filepath = cli.save_dir / filename
+    if not filepath.exists():
+        filepath = cli.working_directory / filename
+
+    if not filepath.exists():
+        logger.info(f"Failed to load state from {filename}.")
+        cli.console.print(
+            f"  [red]Error:[/red] Could not find file: [bold]{filename}[/bold]"
+        )
+        return False
+
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if isinstance(data, list):
+            state_n = int(args[1]) if len(args) > 1 else 0
+            data = data[state_n]
+
+        saved_state = deserialize_values(data["values"])
+        cli._create_new_config()
+
+        cli.graph.update_state(cli.graph_config, saved_state)
+
+        if "use_case" in saved_state:
+            cli.current_use_case = saved_state["use_case"]
+        if "sequence_diagram" in saved_state:
+            cli.current_sequence_diagram = saved_state["sequence_diagram"]
+        cli._save_output()
+
+        relative_path = cli.get_relative_path(filepath)
+        cli.console.print(
+            f"  [green]✓ Successfully loaded state from:[/green] [blue]{relative_path}[/blue]"
+        )
+        return False
+    except Exception as e:
+        logger.info(f"Failed to load state from {filename}.")
+        logger.debug(f"State loading raised {type(e).__name__}: {e}")
+        cli.console.print(f"  [red]Error loading state:[/red] {e}")
+        return False

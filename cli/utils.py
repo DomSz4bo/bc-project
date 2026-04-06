@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from langchain_core.load import dumpd
+from langchain_core import load as langload
 from langgraph.types import StateSnapshot
 
 
@@ -11,7 +11,7 @@ def serialize_snapshot(snapshot: StateSnapshot) -> dict[str, Any]:
     Serializes a LangGraph StateSnapshot into a JSON-compatible dictionary.
     """
     return {
-        "values": dumpd(snapshot.values),
+        "values": langload.dumpd(snapshot.values),
         "next": snapshot.next,
         "config": snapshot.config,
         "metadata": snapshot.metadata,
@@ -24,3 +24,10 @@ def save_to_json(data, filepath: Path | str):
     """
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def deserialize_values(values: dict[str, Any]) -> dict[str, Any]:
+    """
+    Deserializes LangGraph state values from a JSON-compatible dictionary.
+    """
+    return langload.load(values)

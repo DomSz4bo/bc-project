@@ -26,6 +26,7 @@ from rich.text import Text
 from cli.commands import (
     handle_exit,
     handle_list_skills,
+    handle_load_state,
     handle_reload_skills,
     handle_save,
     handle_save_full,
@@ -48,10 +49,7 @@ class InteractiveCLI:
     def __init__(self):
         self.console = Console()
         self.graph = create_graph()
-        self.thread_id = str(uuid.uuid4())
-        self.graph_config: RunnableConfig = {
-            "configurable": {"thread_id": self.thread_id}
-        }
+        self._create_new_config()
 
         self.current_use_case: str | None = None
         self.current_sequence_diagram: str | None = None
@@ -60,6 +58,12 @@ class InteractiveCLI:
         self._setup_commands()
         self._setup_ui()
         self._setup_skills()
+
+    def _create_new_config(self):
+        self.thread_id = str(uuid.uuid4())
+        self.graph_config: RunnableConfig = {
+            "configurable": {"thread_id": self.thread_id}
+        }
 
     def _setup_paths(self):
         """Initializes configuration and history paths."""
@@ -81,6 +85,7 @@ class InteractiveCLI:
             "/exit": handle_exit,
             "/save": handle_save,
             "/save-full": handle_save_full,
+            "/load": handle_load_state,
             "/skills-list": handle_list_skills,
             "/skills-reload": handle_reload_skills,
         }
@@ -157,7 +162,7 @@ class InteractiveCLI:
         command, *args = user_input.split()
         action = self.commands_map.get(command)
         if action:
-            return await action(cli=self)
+            return await action(self, *args)
 
         self.console.print(f"[red]Unknown command:[/red] {user_input}")
         return False
