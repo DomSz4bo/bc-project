@@ -20,12 +20,12 @@ actor B as "User"
 
 **Stereotypes** (use JSON config syntax):
 ```
-participant A {"shape": "boundary"}    # boundary
-participant A {"shape": "control"}     # control
-participant A {"shape": "entity"}      # entity
-participant A {"shape": "database"}    # cylinder
-participant A {"shape": "collections"} # collections
-participant A {"shape": "queue"}       # queue
+participant A@{"type": "boundary"}    # boundary
+participant A@{"type": "control"}     # control
+participant A@{"type": "entity"}      # entity
+participant A@{"type": "database"}    # cylinder
+participant A@{"type": "collections"} # collections
+participant A@{"type": "queue"}       # queue
 ```
 
 **Grouping:**
