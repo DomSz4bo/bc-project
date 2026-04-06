@@ -10,12 +10,12 @@ if TYPE_CHECKING:
 THREAD_PREFIX_LENGTH = 8
 
 
-async def handle_exit(cli: InteractiveCLI) -> bool:
+async def handle_exit(cli: InteractiveCLI, *args) -> bool:
     """Signals the CLI to exit."""
     return True
 
 
-async def handle_save(cli: InteractiveCLI) -> bool:
+async def handle_save(cli: InteractiveCLI, *args) -> bool:
     """Saves the current state of the workflow to a JSON file."""
     state = cli.graph.get_state(cli.graph_config)
     thread_prefix = cli.thread_id[:THREAD_PREFIX_LENGTH]
@@ -26,7 +26,7 @@ async def handle_save(cli: InteractiveCLI) -> bool:
     return False
 
 
-async def handle_save_full(cli: InteractiveCLI) -> bool:
+async def handle_save_full(cli: InteractiveCLI, *args) -> bool:
     """Saves the full state history of the workflow to a JSON file."""
     history = list(cli.graph.get_state_history(cli.graph_config))
     thread_prefix = cli.thread_id[:THREAD_PREFIX_LENGTH]
@@ -38,7 +38,7 @@ async def handle_save_full(cli: InteractiveCLI) -> bool:
     return False
 
 
-async def handle_list_skills(cli: InteractiveCLI):
+async def handle_list_skills(cli: InteractiveCLI, *args):
     """Lists all available skills."""
     skills = cli.skills_manager.get_all_skills()
     if not skills:
@@ -54,8 +54,13 @@ async def handle_list_skills(cli: InteractiveCLI):
     return False
 
 
-async def handle_reload_skills(cli: InteractiveCLI) -> bool:
+async def handle_reload_skills(cli: InteractiveCLI, *args) -> bool:
     """Reloads Agent skills."""
     cli.skills_manager.reload_skills()
     cli.console.print("\n  [green]✓ Agent skills reloaded successfully.[/green]\n")
     return False
+
+
+async def handle_load_state(cli: InteractiveCLI, *args) -> bool:
+    """Loads initial state of the workflow."""
+    pass

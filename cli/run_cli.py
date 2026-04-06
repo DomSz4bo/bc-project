@@ -1,10 +1,11 @@
 import asyncio
+import traceback
 import uuid
 from os.path import samefile
 from pathlib import Path
 from typing import Any
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import (
     CustomStreamPart,
@@ -12,14 +13,15 @@ from langgraph.types import (
     StreamPart,
     UpdatesStreamPart,
 )
+from loguru import logger
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style as PromptStyle
 from rich.console import Console
-
-import traceback
+from rich.panel import Panel
+from rich.text import Text
 
 from cli.commands import (
     handle_exit,
@@ -28,9 +30,14 @@ from cli.commands import (
     handle_save,
     handle_save_full,
 )
+from src.graph.node_names import Nodes
 from src.graph.state import GraphContext
-from src.graph.workflow import create_graph, SUPERVISOR
+from src.graph.workflow import create_graph
 from src.utils.skills import SkillManager
+from src.utils.streaming import CustomStreamData
+
+logger.remove()
+logger.add(".app_cli/logs/logs_{time:YYYY-MM-DD_HH-mm-ss}.log")
 
 
 class InteractiveCLI:
@@ -147,7 +154,8 @@ class InteractiveCLI:
         """
         Executes a slash command. Returns True if the CLI should exit.
         """
-        action = self.commands_map.get(user_input)
+        command, *args = user_input.split()
+        action = self.commands_map.get(command)
         if action:
             return await action(cli=self)
 
@@ -165,9 +173,12 @@ class InteractiveCLI:
         }
 
         self.active_node = None
+        self.full_response = ""
         self.status = self.console.status(
             "[bold]Starting workflow...[/bold]", spinner="hearts"
         )
+
+        self.console.print("=" * 50)
 
         try:
             self.status.start()
@@ -177,7 +188,7 @@ class InteractiveCLI:
                 context=graph_context,
                 stream_mode=["updates", "messages", "custom"],
                 version="v2",
-                subgraphs=True,
+                subgraphs=False,
             ):
                 chunk: StreamPart
                 match chunk["type"]:
@@ -191,45 +202,68 @@ class InteractiveCLI:
                         pass
         finally:
             self.status.stop()
-            self.active_node = None
+            self.status = None
 
-        self.console.print("-" * 10 + "\n")
+        self.console.print("=" * 50 + "\n")
 
     def _process_custom_stream(self, chunk: CustomStreamPart) -> None:
-        self.status.start()
-        self.status.update("New status", spinner="arc")
+        data: CustomStreamData = chunk["data"]
+        style = data.extra.get("style", "bold italic teal")
+        message = Text(data.message, style)
+
+        if data.type == "start":
+            self.status.start()
+            spinner = data.extra.get("spinner", "dots")
+            self.status.update(message, spinner=spinner)
+            return
+
+        if data.type == "end":
+            self.status.stop()
+
+        if self.full_response and self.full_response[-1] != "\n":
+            self.console.print()
+        self.console.print(Panel(message))
 
     def _process_message_stream(self, chunk: MessagesStreamPart) -> None:
         self.status.stop()
         msg_chunk, metadata = chunk["data"]
         node_name = metadata.get("langgraph_node")
 
-        # if node_name and node_name != self.active_node:
-        #     self.active_node = node_name
+        if node_name and node_name != self.active_node:
+            if self.full_response and self.full_response[-1] != "\n":
+                self.console.print()
+            self.console.print(Panel(f"{node_name}:"), style="bold yellow1")
+            self.active_node = node_name
+            self.full_response = ""
 
-        # if node_name == SUPERVISOR and msg_chunk.content:
-        #     self.console.print(msg_chunk.text, end="")
-
-        if msg_chunk.text:
+        if msg_chunk.text and node_name == Nodes.SUPERVISOR:
+            self.full_response += msg_chunk.text
             self.console.print(msg_chunk.text, end="")
 
     def _process_update_stream(self, chunk: UpdatesStreamPart) -> None:
-        self.status.start()
+        self.status.stop()
         for node_name, updates in chunk["data"].items():
             self._process_node_update(node_name, updates)
 
     def _process_node_update(self, node_name: str, updates: dict[str, Any]):
         """Processes and prints updates from a single workflow node."""
+        self.console.print("\n\n" + "-" * 15 + " update " + "-" * 15)
         self.console.print(f"✓ [{node_name}] completed task.")
         if not updates:
             return
 
         if "supervisor_phase" in updates:
             self.console.print(f"  ➜ phase: {updates['supervisor_phase']}")
+        if "user_intent_summary" in updates:
+            self.console.print(f"  ➜ intent: {updates['user_intent_summary']}")
+        if "design_notes" in updates:
+            self.console.print(f"  ➜ notes: {updates['design_notes']}")
         if "critic_verdict" in updates:
             self.console.print(f"  ➜ critic: {updates['critic_verdict']}")
         if "critic_feedback" in updates:
-            self.console.print(f"  ➜ feedback: {updates['critic_feedback']}")
+            self.console.print(f"  ➜ criti_feedback: {updates['critic_feedback']}")
+        if "qa_feedback" in updates:
+            self.console.print(f"  ➜ qa_feedback: {updates['qa_feedback']}")
 
         if "use_case" in updates or "sequence_diagram" in updates:
             if "use_case" in updates:
@@ -241,15 +275,15 @@ class InteractiveCLI:
                 f"  ➜ Updated {self.get_relative_path(self.output_file)}"
             )
 
-        if "messages" in updates:
+        if "messages" in updates and updates["messages"]:
             last_msg = updates["messages"][-1]
-            if isinstance(last_msg, AIMessage):
-                if node_name == "Supervisor":
-                    print()
-                elif last_msg.content:
-                    self.console.print(
-                        f"\nAssistant ({node_name}): {last_msg.content}\n"
-                    )
+            if isinstance(last_msg, ToolMessage):
+                self.console.print(f"  ➜ ToolMessage ({last_msg.name}): {last_msg}\n")
+
+        if "qa_messages" in updates and updates["qa_messages"]:
+            last_msg = updates["qa_messages"][-1]
+            if isinstance(last_msg, ToolMessage):
+                self.console.print(f"  ➜ QAToolMessage ({last_msg.name}): {last_msg}\n")
 
     async def run(self):
         """Primary execution loop for the CLI."""
