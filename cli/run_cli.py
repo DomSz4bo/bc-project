@@ -3,6 +3,7 @@ import traceback
 import uuid
 from os.path import samefile
 from pathlib import Path
+import warnings
 from typing import Any
 
 from langchain_core.messages import HumanMessage, ToolMessage
@@ -331,6 +332,7 @@ class InteractiveCLI:
 
 def main():
     """Synchronous entry point for the CLI"""
+    # warnings.filterwarnings("ignore")
     cli = InteractiveCLI()
     try:
         asyncio.run(cli.run())

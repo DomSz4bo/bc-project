@@ -18,12 +18,26 @@ async def handle_exit(cli: InteractiveCLI, *args) -> bool:
     return True
 
 
+def get_save_filename(args: tuple[str], fallback_template: str, thread_id: str):
+    if args:
+        filename: str = args[0]
+        if not filename.lower().endswith(".json"):
+            filename += ".json"
+    else:
+        thread_prefix = thread_id[:THREAD_PREFIX_LENGTH]
+        filename = fallback_template.replace("{id}", id=thread_prefix)
+
+    return filename
+
+
 async def handle_save(cli: InteractiveCLI, *args) -> bool:
     """Saves the current state of the workflow to a JSON file."""
+    filename = get_save_filename(args, "state_{id}.json", cli.thread_id)
+    filepath = cli.save_dir / filename
+
     state = cli.graph.get_state(cli.graph_config)
-    thread_prefix = cli.thread_id[:THREAD_PREFIX_LENGTH]
-    filepath = cli.save_dir / f"state_{thread_prefix}.json"
     save_to_json(serialize_snapshot(state), filepath)
+
     relative_path = cli.get_relative_path(filepath)
     cli.console.print(f"  ➜  Saved current state to [blue]{relative_path}[/blue]")
     return False
@@ -31,11 +45,13 @@ async def handle_save(cli: InteractiveCLI, *args) -> bool:
 
 async def handle_save_full(cli: InteractiveCLI, *args) -> bool:
     """Saves the full state history of the workflow to a JSON file."""
+    filename = get_save_filename(args, "history_{id}.json", cli.thread_id)
+    filepath = cli.save_dir / filename
+
     history = list(cli.graph.get_state_history(cli.graph_config))
-    thread_prefix = cli.thread_id[:THREAD_PREFIX_LENGTH]
-    filepath = cli.save_dir / f"history_{thread_prefix}.json"
     serialized_history = [serialize_snapshot(s) for s in history]
     save_to_json(serialized_history, filepath)
+
     relative_path = cli.get_relative_path(filepath)
     cli.console.print(f"  ➜  Saved full state history to [blue]{relative_path}[/blue]")
     return False
