@@ -11,7 +11,8 @@
 # Personal project notes
 notes/*
 *.png
-*.mmd
+/*.mmd
+
 .app_cli/
 
 ## From template
