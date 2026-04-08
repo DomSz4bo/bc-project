@@ -1,0 +1,32 @@
+sequenceDiagram
+    %% autonumber
+    actor Librarian
+    participant System
+    participant Database as Library Database
+
+    Librarian->>System: Enters Customer ID and Book ID
+    System->>Database: Checks Customer's standing
+
+    alt Customer has Unpaid Fines (3a)
+        Database-->>System: Reports unpaid fines
+        System-->>Librarian: Shows error: Fines must be paid first
+    else Customer Reached Maximum Holds (3b)
+        Database-->>System: Reports maximum holds reached
+        System-->>Librarian: Shows error: Hold limit reached
+    else Customer Eligible
+        Database-->>System: Confirms Customer is eligible
+        System->>Database: Checks Book's current status
+
+        alt Book is Actually Available (5a)
+            Database-->>System: Reports Book is available
+            System-->>Librarian: Shows message: Book is on the shelf
+        else Book Not Eligible for Holds (5b)
+            Database-->>System: Reports Book is not eligible
+            System-->>Librarian: Shows error: Book cannot be placed on hold
+        else Book Eligible (Checked Out)
+            Database-->>System: Confirms Book is checked out and eligible
+            System->>Database: Adds Customer to Book's hold queue
+            System->>Database: Increments Customer's active hold count
+            System-->>Librarian: Shows confirmation: Hold placed successfully
+        end
+    end
