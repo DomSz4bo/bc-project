@@ -1,0 +1,45 @@
+sequenceDiagram
+    actor Customer
+    participant System
+    participant Database as Locker Database
+    participant Payment as Payment Terminal
+    participant Hardware as Hardware Controller
+
+    Customer->>System: Enters pickup code
+    System->>Database: Requests package details
+
+    alt Invalid Code (3b)
+        Database-->>System: Returns Not Found / Expired
+        System-->>Customer: Shows error: Invalid Code
+    else Valid Code
+        Database-->>System: Returns door number and fee amount
+
+        opt Overdue Fee > $0.00 (3a)
+            System-->>Customer: Prompts for payment
+            Customer->>Payment: Taps credit card
+            
+            alt Payment Declined (3a4a)
+                Payment-->>System: Reports payment declined
+                System-->>Customer: Shows error: Payment Failed
+            else Payment Successful
+                Payment-->>System: Confirms successful payment
+            end
+        end
+
+        %% Process continues if no fee, or fee was paid successfully
+        opt If Payment Successful OR No Fee
+            System->>Hardware: Commands to open specified door
+
+            alt Hardware Door Jam (5a)
+                Hardware-->>System: Reports failure to open door
+                System-->>Customer: Shows error: Hardware Error
+                opt If fee was paid (5a3)
+                    System->>Payment: Commands to void transaction
+                end
+            else Door Opens Successfully
+                Hardware-->>System: Confirms door is open
+                System->>Database: Updates package status to "Picked Up"
+                System-->>Customer: Shows success message: Door is open
+            end
+        end
+    end
