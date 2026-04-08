@@ -1,4 +1,3 @@
-```mermaid
 sequenceDiagram
     %% autonumber
     actor Customer
@@ -11,34 +10,41 @@ sequenceDiagram
     deactivate Customer
     
     System->>+Inventory: Check Stock (Product ID)
-    deactivate System
 
     alt 2a: Product Out of Stock
-        Inventory-->>+System: Out of Stock
+        Inventory-->>System: Out of Stock
         deactivate Inventory
-        System-->>Customer: Display "Out of Stock"
+        System-->>+Customer: Display "Out of Stock"
+        deactivate Customer
         System->>-System: Reset Session State
     else 2: Product In Stock       
         activate Inventory
         Inventory-->>+System: In Stock  
         deactivate Inventory
         System->>+Inventory: Get Price (Product ID)
-        deactivate System
-        Inventory-->>+System: Price
+        Inventory-->>System: Price
         deactivate Inventory
         System->>-Customer: Prompt to Insert Coins
+        activate Customer
 
         loop Payment Collection
             Customer->>+Bank: Insert Coins
+            deactivate Customer
             Bank-->>-System: Total Inserted Amount
             activate System
             deactivate System
 
             break 2-9a: Customer Cancels
+                activate Customer
                 Customer->>+System: Press Cancel
-                System->>Bank: Return All Inserted Coins
-                System-->>Customer: (Coins Returned)
-                System->>-System: Reset Session State
+                deactivate Customer
+                System->>+Bank: Return All Inserted Coins
+                deactivate Bank
+                System-->>+Customer: (Coins Returned)
+                deactivate Customer
+                System->>+System: Reset Session State
+                deactivate System
+                deactivate System
             end
 
             break Inserted Amount >= Price
@@ -46,16 +52,19 @@ sequenceDiagram
             end
             
             activate System
-            System-->>Customer: Display "Remaining Balance Required"
+            System-->>+Customer: Display "Remaining Balance Required"
+            deactivate Customer
+            deactivate System
         end
 
+        activate System
         System->>+Bank: Can Provide Change?
-        deactivate System
         
         alt 9a: Unable to Provide Change
-            Bank-->>+System: No
+            Bank-->>System: No
             deactivate Bank
-            System-->>Customer: Display "Exact Change Required"
+            System-->>+Customer: Display "Exact Change Required"
+            deactivate Customer
             System->>+Bank: Return All Inserted Coins
             deactivate System
             deactivate Bank
@@ -67,10 +76,10 @@ sequenceDiagram
             deactivate Inventory
             System->>+Bank: Dispense Change (Amount - Price)
             deactivate Bank
-            System-->>Customer: Product & Change Delivered
+            System-->>+Customer: Product & Change Delivered
+            deactivate Customer
             System->>+System: Record Transaction & Reset Balance
             deactivate System
             deactivate System
         end
     end
-```
