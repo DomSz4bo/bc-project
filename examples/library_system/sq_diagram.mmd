@@ -4,29 +4,55 @@ sequenceDiagram
     participant System
     participant Database as Library Database
 
-    Librarian->>System: Enters Customer ID and Book ID
-    System->>Database: Checks Customer's standing
+    activate Librarian
+    Librarian->>+System: Enters Customer ID and Book ID
+    deactivate Librarian
+    System->>+Database: Checks Customer's standing
 
     alt Customer has Unpaid Fines (3a)
-        Database-->>System: Reports unpaid fines
-        System-->>Librarian: Shows error: Fines must be paid first
+        Database-->>-System: Reports unpaid fines
+        System-->>+Librarian: Shows error: Fines must be paid first
+        deactivate System
+        deactivate Librarian
+        
     else Customer Reached Maximum Holds (3b)
-        Database-->>System: Reports maximum holds reached
-        System-->>Librarian: Shows error: Hold limit reached
+        activate Database
+        activate System
+        Database-->>-System: Reports maximum holds reached
+        System-->>+Librarian: Shows error: Hold limit reached
+        deactivate System
+        deactivate Librarian
+
     else Customer Eligible
-        Database-->>System: Confirms Customer is eligible
-        System->>Database: Checks Book's current status
+        activate Database
+        activate System
+        Database-->>-System: Confirms Customer is eligible
+        System->>+Database: Checks Book's current status
 
         alt Book is Actually Available (5a)
-            Database-->>System: Reports Book is available
-            System-->>Librarian: Shows message: Book is on the shelf
+            Database-->>-System: Reports Book is available
+            System-->>+Librarian: Shows message: Book is on the shelf
+            deactivate System
+            deactivate Librarian
+
         else Book Not Eligible for Holds (5b)
-            Database-->>System: Reports Book is not eligible
-            System-->>Librarian: Shows error: Book cannot be placed on hold
+            activate Database
+            activate System
+            Database-->>-System: Reports Book is not eligible
+            System-->>+Librarian: Shows error: Book cannot be placed on hold
+            deactivate System
+            deactivate Librarian
+
         else Book Eligible (Checked Out)
-            Database-->>System: Confirms Book is checked out and eligible
-            System->>Database: Adds Customer to Book's hold queue
-            System->>Database: Increments Customer's active hold count
-            System-->>Librarian: Shows confirmation: Hold placed successfully
+            activate Database
+            activate System
+            Database-->>-System: Confirms Book is checked out and eligible
+            System->>+Database: Adds Customer to Book's hold queue
+            deactivate Database
+            System->>+Database: Increments Customer's active hold count
+            deactivate Database
+            System-->>+Librarian: Shows confirmation: Hold placed successfully
+            deactivate System
+            deactivate Librarian
         end
     end

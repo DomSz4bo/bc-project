@@ -23,7 +23,7 @@
 **Main Success Scenario:**
 1. **Customer** enters their pickup code into the **System**.
 2. **System** requests package details for the code from the **Locker Database**.
-3. **Locker Database** returns package details including the door number and an overdue fee of $0.00.
+3. **Locker Database** returns package details including the door number and an overdue fee of 0.00€.
 4. **System** commands the **Hardware Controller** to open the specified door.
 5. **Hardware Controller** confirms the door has successfully opened.
 6. **System** commands the **Locker Database** to update the package status to "Picked Up".
@@ -31,7 +31,7 @@
 
 **Extensions (Failure Paths & Conditionals):**
 * **3a. Package has an Overdue Fee:**
-    * 3a1. **Locker Database** returns package details with an overdue fee > $0.00.
+    * 3a1. **Locker Database** returns package details with an overdue fee > 0.00€.
     * 3a2. **System** prompts the **Customer** to pay the specified fee amount.
     * 3a3. **Customer** taps their card on the **Payment Terminal**.
     * 3a4. **Payment Terminal** confirms a successful payment to the **System**.
