@@ -46,7 +46,8 @@ sequenceDiagram
         System-->>+Customer: Shows error: Hardware Error
         deactivate Customer
         opt If fee was paid (5a3)
-            System->>Payment: Commands to void transaction
+            System->>+Payment: Commands to void transaction
+            deactivate Payment
         end
         deactivate System
     else Door Opens Successfully
