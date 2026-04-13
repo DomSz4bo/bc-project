@@ -210,3 +210,39 @@ class ToolStreamingMiddleware(AgentMiddleware):
 
         return result
 
+
+class ModelCallStreamingMiddleware(AgentMiddleware):
+    def __init__(self, working_message: str, end_message: str):
+        self.work_message = working_message
+        self.end_message = end_message
+        super().__init__()
+
+    def before_model(
+        self, state: AgentState, runtime: Runtime
+    ) -> dict[str, Any] | None:
+        self._write_working_message()
+
+    def after_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        self._write_end_message()
+
+    async def abefore_model(
+        self, state: AgentState, runtime: Runtime
+    ) -> dict[str, Any] | None:
+        self._write_working_message()
+
+    async def aafter_model(
+        self, state: AgentState, runtime: Runtime
+    ) -> dict[str, Any] | None:
+        self._write_end_message()
+
+    def _write_working_message(self):
+        if not self.work_message:
+            return
+        writer = get_stream_writer()
+        writer(CustomStreamData(self.work_message, "start", {"spinner": "aesthetic"}))
+
+    def _write_end_message(self):
+        if not self.end_message:
+            return
+        writer = get_stream_writer()
+        writer(CustomStreamData(self.end_message, "end"))
