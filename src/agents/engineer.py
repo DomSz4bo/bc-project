@@ -1,5 +1,5 @@
 from langchain.agents import create_agent
-from langchain.agents.middleware import ModelFallbackMiddleware, ModelRetryMiddleware
+from langchain.agents.middleware import ModelFallbackMiddleware
 from langchain.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -10,9 +10,10 @@ from loguru import logger
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash, gemini_3p1_flash_lite, gemma_4_31b
 from src.utils.middleware import (
-    ToolStreamingMiddleware,
     LoggingMiddleware,
+    ModelCallStreamingMiddleware,
     ToolErrorMiddleware,
+    ToolStreamingMiddleware,
 )
 from src.utils.source_context import extract_project_context
 from src.utils.streaming import CustomStreamData
@@ -27,6 +28,7 @@ async def engineer(
     Writes the implementation for the designed system and tests.
     """
     writer = get_stream_writer()
+    writer(CustomStreamData("Engineer", "node_name"))
     writer(CustomStreamData("Engineer is working on the implementation", "start"))
     logger.info("Engineer node initiated.")
 
@@ -64,13 +66,8 @@ async def engineer(
             system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,
             middleware=[
-                ModelRetryMiddleware(
-                    on_failure="error",
-                    initial_delay=8,
-                    backoff_factor=8,
-                    max_delay=80,
-                ),
                 ModelFallbackMiddleware(gemini_3p1_flash_lite, gemma_4_31b),
+                ModelCallStreamingMiddleware("Working on the implementation...", ""),
                 ToolStreamingMiddleware(),
                 ToolErrorMiddleware(),
                 LoggingMiddleware(),
