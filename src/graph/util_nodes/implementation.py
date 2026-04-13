@@ -1,8 +1,10 @@
 from langchain_core.messages import ToolMessage
+from langgraph.config import get_stream_writer
 
 from src.agents.qa import REJECT_IMPLEMENTATION
 from src.agents.supervisor import IMPLEMENT_HANDOFF
 from src.graph.state import AgentState
+from src.utils.streaming import CustomStreamData
 
 
 async def prepare_implementation_node(state: AgentState) -> AgentState:
@@ -15,7 +17,12 @@ async def prepare_implementation_node(state: AgentState) -> AgentState:
     )
 
     if not handoff_call:
-        return {}
+        raise RuntimeError(
+            "Expected last message to contain implementation handoff tool call."
+        )
+
+    writer = get_stream_writer()
+    writer(CustomStreamData("Handed off to implementation team.", "message"))
 
     tool_call_id = handoff_call["id"]
     return {

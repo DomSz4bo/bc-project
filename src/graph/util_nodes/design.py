@@ -1,9 +1,11 @@
 from langchain_core.messages import ToolMessage
+from langgraph.config import get_stream_writer
 from loguru import logger
 
 from src.agents.supervisor import DESIGN_HANDOFF
 from src.graph.state import AgentState
 from src.utils.llm import gemma_3_27b
+from src.utils.streaming import CustomStreamData
 
 
 async def prepare_design_node(state: AgentState) -> AgentState:
@@ -16,9 +18,11 @@ async def prepare_design_node(state: AgentState) -> AgentState:
     handoff_call = next(
         (tc for tc in last_msg.tool_calls if tc["name"] == DESIGN_HANDOFF), None
     )
-
     if not handoff_call:
-        return {}
+        raise RuntimeError("Expected last message to contain design handoff tool call.")
+
+    writer = get_stream_writer()
+    writer(CustomStreamData("Handed off to design team.", "message"))
 
     tool_call_id = handoff_call["id"]
     return {
