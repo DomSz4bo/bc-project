@@ -41,6 +41,17 @@ from src.utils.streaming import CustomStreamData
 logger.remove()
 logger.add(".app_cli/logs/logs_{time:YYYY-MM-DD_HH-mm-ss}.log")
 
+NODES_OF_INTEREST = [
+    Nodes.SUPERVISOR,
+    Nodes.ANALYST,
+    Nodes.ARCHITECT,
+    Nodes.CRITIC,
+    Nodes.SCAFFOLDER,
+    Nodes.TDD,
+    Nodes.ENGINEER,
+    Nodes.QA,
+]
+
 
 class InteractiveCLI:
     """
@@ -194,7 +205,7 @@ class InteractiveCLI:
                 context=graph_context,
                 stream_mode=["updates", "messages", "custom"],
                 version="v2",
-                subgraphs=False,
+                subgraphs=True,
             ):
                 chunk: StreamPart
                 match chunk["type"]:
@@ -214,7 +225,12 @@ class InteractiveCLI:
 
     def _process_custom_stream(self, chunk: CustomStreamPart) -> None:
         data: CustomStreamData = chunk["data"]
-        style = data.extra.get("style", "bold italic teal")
+
+        if data.type == "node_name":
+            self._print_node_name(data.message)
+            return
+
+        style = data.extra.get("style", "bold italic")
         message = Text(data.message, style)
 
         if data.type == "start":
@@ -231,20 +247,26 @@ class InteractiveCLI:
         self.console.print(Panel(message))
 
     def _process_message_stream(self, chunk: MessagesStreamPart) -> None:
-        self.status.stop()
         msg_chunk, metadata = chunk["data"]
         node_name = metadata.get("langgraph_node")
 
         if node_name and node_name != self.active_node:
             if self.full_response and self.full_response[-1] != "\n":
+                self.status.stop()
                 self.console.print()
-            self.console.print(Panel(f"{node_name}:"), style="bold yellow1")
+            if node_name in NODES_OF_INTEREST:
+                self.status.stop()
+                self._print_node_name(node_name)
             self.active_node = node_name
             self.full_response = ""
 
         if msg_chunk.text and node_name == Nodes.SUPERVISOR:
+            self.status.stop()
             self.full_response += msg_chunk.text
             self.console.print(msg_chunk.text, end="")
+    
+    def _print_node_name(self, node_name: str):
+        self.console.print(Panel(f"{node_name}:"), style="bold blue3")
 
     def _process_update_stream(self, chunk: UpdatesStreamPart) -> None:
         self.status.stop()
