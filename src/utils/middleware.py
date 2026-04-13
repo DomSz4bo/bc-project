@@ -3,9 +3,12 @@ from typing import Any, Callable
 from langchain.agents.middleware import AgentMiddleware, AgentState
 from langchain.messages import ToolMessage
 from langchain.tools.tool_node import ToolCallRequest
+from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 from loguru import logger
+
+from src.utils.streaming import CustomStreamData
 
 
 def format_tool_error(e: Exception) -> str:
@@ -28,7 +31,6 @@ def format_tool_error(e: Exception) -> str:
 class LoggingMiddleware(AgentMiddleware):
     """Comprehensive logging middleware for agent execution."""
 
-    # --- Synchronous Hooks ---
     def before_agent(
         self, state: AgentState, runtime: Runtime
     ) -> dict[str, Any] | None:
@@ -78,7 +80,6 @@ class LoggingMiddleware(AgentMiddleware):
             logger.error(f"[Tool] {tool_name} failed: {e}")
             raise
 
-    # --- Asynchronous Hooks ---
     async def abefore_agent(
         self, state: AgentState, runtime: Runtime
     ) -> dict[str, Any] | None:
@@ -166,3 +167,46 @@ class ToolErrorMiddleware(AgentMiddleware):
                 content=format_tool_error(e),
                 tool_call_id=request.tool_call["id"],
             )
+
+
+class ToolStreamingMiddleware(AgentMiddleware):
+    """Custom data streaming middleware. Provides data about tool calls."""
+
+    def wrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], ToolMessage | Command],
+    ) -> ToolMessage | Command:
+        tool_call = request.tool_call
+        tool_name = tool_call.get("name", "Unknown")
+
+        result = handler(request)
+
+        writer = get_stream_writer()
+        msg = f"Executed tool call: {tool_name}\nResult:\n{result}"
+        writer(CustomStreamData(msg, "message"))
+
+        return result
+
+    async def awrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable,
+    ) -> ToolMessage | Command:
+        tool_call = request.tool_call
+        tool_name = tool_call.get("name", "Unknown")
+
+        writer = get_stream_writer()
+        writer(
+            CustomStreamData(
+                f"Executing tool call: {tool_name}", "start", {"spinner": "aesthetic"}
+            )
+        )
+
+        result = await handler(request)
+
+        msg = f"Executed tool call: {tool_name}\nResult:\n{result}"
+        writer(CustomStreamData(msg, "end"))
+
+        return result
+
