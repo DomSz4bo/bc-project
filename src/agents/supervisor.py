@@ -8,7 +8,11 @@ from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3p1_flash_lite as llm
-from src.utils.middleware import LoggingMiddleware, format_tool_error
+from src.utils.middleware import (
+    ToolStreamingMiddleware,
+    LoggingMiddleware,
+    format_tool_error,
+)
 from src.utils.streaming import CustomStreamData
 from src.utils.tools import (
     activate_skill,
@@ -61,11 +65,16 @@ ROUTING_TOOLS = [handoff_to_design, handoff_to_implementation]
 ACTION_TOOLS = [*file_tools, run_tests, run_tests_with_coverage, activate_skill]
 
 logging_mw = LoggingMiddleware()
+streaming_mw = ToolStreamingMiddleware()
 
 supervisor_tool_node = ToolNode(
     ROUTING_TOOLS + ACTION_TOOLS,
-    wrap_tool_call=logging_mw.wrap_tool_call,
-    awrap_tool_call=logging_mw.awrap_tool_call,
+    wrap_tool_call=lambda req, h: logging_mw.wrap_tool_call(
+        req, lambda r: streaming_mw.wrap_tool_call(r, h)
+    ),
+    awrap_tool_call=lambda req, h: logging_mw.awrap_tool_call(
+        req, lambda r: streaming_mw.awrap_tool_call(r, h)
+    ),
     handle_tool_errors=format_tool_error,
 )
 

@@ -17,7 +17,11 @@ from src.utils.llm import (
     gemini_3_flash,
     gemini_3p1_flash_lite,
 )
-from src.utils.middleware import LoggingMiddleware, format_tool_error
+from src.utils.middleware import (
+    ToolStreamingMiddleware,
+    LoggingMiddleware,
+    format_tool_error,
+)
 from src.utils.source_context import extract_project_context
 from src.utils.streaming import CustomStreamData
 from src.utils.tools import file_tools, run_tests_with_coverage
@@ -48,6 +52,7 @@ all_tools = file_tools + routing_tools + action_tools
 DEFAULT_REVISION_LIMIT = 3
 
 logging_mw = LoggingMiddleware()
+streaming_mw = ToolStreamingMiddleware()
 llm_with_tools = build_fallback_chain(
     gemini_3_flash.bind_tools(all_tools),
     gemini_2p5_flash.bind_tools(all_tools),
@@ -130,8 +135,12 @@ async def qa_tool_node(state: AgentState) -> AgentState:
 
     tool_node = ToolNode(
         all_tools,
-        wrap_tool_call=logging_mw.wrap_tool_call,
-        awrap_tool_call=logging_mw.awrap_tool_call,
+        wrap_tool_call=lambda req, h: logging_mw.wrap_tool_call(
+            req, lambda r: streaming_mw.wrap_tool_call(r, h)
+        ),
+        awrap_tool_call=lambda req, h: logging_mw.awrap_tool_call(
+            req, lambda r: streaming_mw.awrap_tool_call(r, h)
+        ),
         handle_tool_errors=format_tool_error,
     )
     response: list[ToolMessage] = await tool_node.ainvoke(qa_messages)

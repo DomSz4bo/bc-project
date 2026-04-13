@@ -9,7 +9,11 @@ from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3_flash, gemini_3p1_flash_lite
-from src.utils.middleware import LoggingMiddleware, ToolErrorMiddleware
+from src.utils.middleware import (
+    ToolStreamingMiddleware,
+    LoggingMiddleware,
+    ToolErrorMiddleware,
+)
 from src.utils.source_context import extract_project_context
 from src.utils.streaming import CustomStreamData
 from src.utils.tools import get_mcp_client, run_tests
@@ -67,6 +71,7 @@ async def engineer(
                     max_delay=80,
                 ),
                 ModelFallbackMiddleware(gemini_3p1_flash_lite),
+                ToolStreamingMiddleware(),
                 ToolErrorMiddleware(),
                 LoggingMiddleware(),
             ],
