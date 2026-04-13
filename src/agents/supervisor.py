@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import gemini_3p1_flash_lite as llm
 from src.utils.middleware import (
-    ToolStreamingMiddleware,
     LoggingMiddleware,
+    ToolStreamingMiddleware,
     format_tool_error,
 )
 from src.utils.streaming import CustomStreamData
