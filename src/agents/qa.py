@@ -68,14 +68,19 @@ async def quality_assurance(
     Identifies issues in the implementation and either rejects it (via tool) or finishes.
     """
     writer = get_stream_writer()
-    writer(CustomStreamData("", "start"))
+    writer(CustomStreamData("Evaluating the implementation", "start"))
     logger.info("QA node initiated.")
 
     revision_count = state["qa_revision_count"]
     revision_limit = runtime.context.get("max_code_revisions", DEFAULT_REVISION_LIMIT)
 
     if revision_count >= revision_limit:
-        logger.warning("QA node - revision limit hit.")
+        writer(
+            CustomStreamData(
+                "QA revision limit reached", "end", {"style": "italic red"}
+            )
+        )
+        logger.info("QA node - revision limit hit.")
         return Command(
             update={"qa_feedback": "LIMIT"}, goto=Nodes.FINISH_IMPLEMENTATION
         )
@@ -104,6 +109,9 @@ async def quality_assurance(
     update = {"qa_messages": messages + [response]}
 
     if not response.tool_calls:
+        writer(
+            CustomStreamData("Implementation approved.", "end", {"style": "bold green"})
+        )
         return Command(
             update=update,
             goto=Nodes.FINISH_IMPLEMENTATION,
@@ -117,6 +125,11 @@ async def quality_assurance(
             goto=Nodes.QA_TOOLS,
         )
 
+    writer(
+        CustomStreamData(
+            "Requested implementation changes.", "end", {"style": "italic orange1"}
+        )
+    )
     return Command(
         update=update,
         goto=Nodes.PREPARE_FIX,
