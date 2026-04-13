@@ -24,8 +24,10 @@ IMPLEMENT_HANDOFF = "handoff_to_implementation"
 class DesignInput(BaseModel):
     user_intent_summary: str = Field(
         description=(
-            "The summarized goal of the user including clarifications. "
-            "Be detailed, include anything that may help the design team adhere to the user's requirements."
+            "The summarized goal of the user. This should encompass the whole system. "
+            "Be detailed, include anything that may help the design team adhere to the user's requirements of the final system. "
+            "Do not use this to give instructions on how to modify previous iterations. "
+            "For update instructions use the `instructions` field. "
         )
     )
     instructions: str | None = Field(
@@ -183,7 +185,7 @@ You have access to specialized tools to transition between phases of the develop
    - **When:** Use this only when the INTAKE phase is complete and the requirements are airtight.
    - **Key Arguments:**
      - `user_intent_summary`: The technical requirements document.
-     - `instructions` (Optional): Specific meta-guidance or constraints for the Design team.
+     - `instructions`: Specific meta-guidance or constraints for the Design team. (e.g., 'Do not use mermaid critical blocks in the diagram.', 'Use activations in the diagram.')
    - **Effect:** Signals the end of your turn and moves the workflow into the Design Lab.
 
 The design team creates a structured Use case and complementing Sequence diagram. Once these design artifacts are created you will be moved to an APPROVAL phase, where the user will have the chance to approve or modify the design before you pass it on to be implemented by the implementation team. 
@@ -228,7 +230,10 @@ about the design documents. Help the user make decisions by considering the poss
    - **APPROVED** — the design faithfully captures their intent and they are ready to proceed to implementation.
    - **MODIFICATION** — something is wrong, missing, or misaligned. They want changes.
 
-4. **Handle MODIFICATION with precision.** If the user requests changes, identify exactly what changed relative to the current design and re-initiate the Design Lab with the revised intent. Be explicit with the user about what you understood and what you are sending back for revision. Make sure not to obfuscate any details about the system's expected behaviour.
+4. **Handle MODIFICATION with precision.** If the user requests changes, identify exactly what changed relative to the current design and re-initiate the Design Lab with the revised intent and desing instructions. 
+Be explicit with the user about what you understood and what you are sending back for revision. Make sure not to obfuscate any details about the system's expected behaviour.
+Remember the intent is the summary of the whole system and its expected behaviour, while instructions are specific changes or requests that do not actually fall under the system summary. 
+**IMPORTANT:** The Design Lab is STATELESS, so you must not refer to previous use cases and diagrams. Treat the `handoff_to_design` as a function with the `user_intent_summary` and `instructions` as the inputs - their is no internal state memorization in the function. 
 
 5. **Handle APPROVED with ceremony.** Confirm the approval clearly and initiate the implementation team using the implementation team handoff tool.
 
