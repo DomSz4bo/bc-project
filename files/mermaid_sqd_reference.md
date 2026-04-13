@@ -18,6 +18,26 @@ actor B                                # stick figure
 actor B as "User"
 ```
 
+**Aliases**
+
+*External alias syntax* (preferred) - using the `as` keyword after participant declaration.
+```
+participant as A as Alice
+actor J as John
+# with stereotypes
+participant API@{ "type": "boundary" } as Public API
+actor DB@{ "type": "database" } as User Database
+```
+
+*Inline alias syntax* - inside the configuration object using the `"alias"` field.
+```
+participant API@{ "type": "boundary", "alias": "Public API" }
+actor DB@{ "type": "database", "alias": "User Database" }
+```
+
+> Aliases defined with `as` take precedence over inline config aliases
+
+
 **Stereotypes** (use JSON config syntax):
 ```
 participant A@{"type": "boundary"}    # boundary
@@ -221,6 +241,5 @@ participant A as "Line one<br/>Line two"
 - All blocks (`loop`, `alt`, `par`, `critical`, `break`, `rect`, `box`) must close with `end`
 - `else` and `and` and `option` are keywords inside blocks — do not use as actor names
 - Participant order in diagram = order of first appearance (or explicit declaration order)
-- Aliases defined with `as` take precedence over inline config aliases
 - `create` must come before the first message to/from that participant
 - Nested `par` and `critical` blocks are supported
