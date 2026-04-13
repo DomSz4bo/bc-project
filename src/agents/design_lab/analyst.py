@@ -67,6 +67,7 @@ mandatory and must be populated:
 <template>
 # USE CASE: [Name]
 **Primary Actor:** [Actor Name]
+
 **Secondary Actors:** [External Systems/DBs]
 
 ## 1. Context & Boundaries

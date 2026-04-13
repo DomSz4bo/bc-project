@@ -95,6 +95,7 @@ The Use Case is the GROUND TRUTH. Your job is to identify semantic inconsistenci
 3. **Extension Coverage**: Every Extension in the Use Case has a corresponding conditional or flow-control block (alt, opt, break, loop) in the diagram, and the chosen block type is appropriate for the nature of that extension.
 4. **Semantic Precision**: Message labels must be descriptive and technically accurate. Arrow directions must reflect the correct request/response flow.
 5. **Architectural Clarity**: Suggest improvements for readability or technical depth where the current modeling is ambiguous or over-simplified.
+6. **Mermaid diagram quality**: Correct use of concepts and mermaid features.
 
 ### Output Requirements
 - Provide a `PASS` verdict only if the diagram is a complete and faithful representation.
