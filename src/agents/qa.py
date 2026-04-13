@@ -16,10 +16,11 @@ from src.utils.llm import (
     gemini_2p5_flash,
     gemini_3_flash,
     gemini_3p1_flash_lite,
+    gemma_4_31b,
 )
 from src.utils.middleware import (
-    ToolStreamingMiddleware,
     LoggingMiddleware,
+    ToolStreamingMiddleware,
     format_tool_error,
 )
 from src.utils.source_context import extract_project_context
@@ -57,6 +58,7 @@ llm_with_tools = build_fallback_chain(
     gemini_3_flash.bind_tools(all_tools),
     gemini_2p5_flash.bind_tools(all_tools),
     gemini_3p1_flash_lite.bind_tools(all_tools),
+    gemma_4_31b.bind_tools(all_tools),
 )
 
 

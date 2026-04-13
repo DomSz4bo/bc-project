@@ -8,7 +8,12 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import build_fallback_chain, gemini_3_flash, gemini_3p1_flash_lite
+from src.utils.llm import (
+    build_fallback_chain,
+    gemini_3_flash,
+    gemini_3p1_flash_lite,
+    gemma_4_31b,
+)
 from src.utils.source_context import extract_project_context
 from src.utils.streaming import CustomStreamData
 
@@ -30,6 +35,7 @@ class TDDPlan(BaseModel):
 llm_with_structure = build_fallback_chain(
     gemini_3_flash.with_structured_output(TDDPlan),
     gemini_3p1_flash_lite.with_structured_output(TDDPlan),
+    gemma_4_31b.with_structured_output(TDDPlan),
 )
 
 
@@ -60,7 +66,7 @@ async def tdd_lead(state: AgentState, runtime: Runtime[GraphContext]) -> AgentSt
     logger.debug(f"TDD Lead plan: {len(plan.files)} files to write.")
 
     write_tests_to_disk(plan, working_dir)
-    
+
     writer(CustomStreamData("Initial tests written.", "end"))
     logger.info("TDD plan written to disk.")
 

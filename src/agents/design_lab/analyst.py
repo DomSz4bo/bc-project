@@ -3,8 +3,10 @@ from langgraph.config import get_stream_writer
 from loguru import logger
 
 from src.graph.state import AgentState
-from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.llm import build_fallback_chain, gemini_3p1_flash_lite, gemma_4_31b
 from src.utils.streaming import CustomStreamData
+
+llm = build_fallback_chain(gemini_3p1_flash_lite, gemma_4_31b)
 
 
 async def analyst(state: AgentState) -> AgentState:

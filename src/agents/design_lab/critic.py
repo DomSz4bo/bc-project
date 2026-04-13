@@ -7,7 +7,12 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import build_fallback_chain, gemini_2p5_flash, gemini_3p1_flash_lite
+from src.utils.llm import (
+    build_fallback_chain,
+    gemini_2p5_flash,
+    gemini_3p1_flash_lite,
+    gemma_4_31b,
+)
 from src.utils.streaming import CustomStreamData
 
 
@@ -27,6 +32,7 @@ class CriticOutput(BaseModel):
 llm_with_structure = build_fallback_chain(
     gemini_2p5_flash.with_structured_output(CriticOutput),
     gemini_3p1_flash_lite.with_structured_output(CriticOutput),
+    gemma_4_31b.with_structured_output(CriticOutput),
 )
 
 

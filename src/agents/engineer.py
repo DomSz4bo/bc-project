@@ -8,7 +8,7 @@ from langgraph.runtime import Runtime
 from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3_flash, gemini_3p1_flash_lite
+from src.utils.llm import gemini_3_flash, gemini_3p1_flash_lite, gemma_4_31b
 from src.utils.middleware import (
     ToolStreamingMiddleware,
     LoggingMiddleware,
@@ -70,7 +70,7 @@ async def engineer(
                     backoff_factor=8,
                     max_delay=80,
                 ),
-                ModelFallbackMiddleware(gemini_3p1_flash_lite),
+                ModelFallbackMiddleware(gemini_3p1_flash_lite, gemma_4_31b),
                 ToolStreamingMiddleware(),
                 ToolErrorMiddleware(),
                 LoggingMiddleware(),

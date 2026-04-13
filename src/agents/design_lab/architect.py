@@ -14,12 +14,17 @@ from loguru import logger
 
 from src.graph.node_names import Nodes
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import build_fallback_chain, gemini_3_flash, gemini_3p1_flash_lite
+from src.utils.llm import (
+    build_fallback_chain,
+    gemini_3_flash,
+    gemini_3p1_flash_lite,
+    gemma_4_31b,
+)
 from src.utils.markdown import extract_block
 from src.utils.mermaid import get_mermaid_reference, validate_mermaid
 from src.utils.streaming import CustomStreamData
 
-llm = build_fallback_chain(gemini_3_flash, gemini_3p1_flash_lite)
+llm = build_fallback_chain(gemini_3_flash, gemini_3p1_flash_lite, gemma_4_31b)
 
 
 async def architect(

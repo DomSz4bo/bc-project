@@ -7,7 +7,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.llm import build_fallback_chain, gemini_3p1_flash_lite, gemma_4_31b
 from src.utils.streaming import CustomStreamData
 
 
@@ -32,7 +32,10 @@ class ScaffoldPlan(BaseModel):
         return "\n".join(str(comp) for comp in self.components)
 
 
-structured_llm = llm.with_structured_output(ScaffoldPlan)
+structured_llm = build_fallback_chain(
+    gemini_3p1_flash_lite.with_structured_output(ScaffoldPlan),
+    gemma_4_31b.with_structured_output(ScaffoldPlan),
+)
 
 
 async def scaffolder(state: AgentState, runtime: Runtime[GraphContext]) -> AgentState:
