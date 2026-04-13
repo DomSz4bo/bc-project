@@ -1,7 +1,9 @@
 import asyncio
+import base64
+import json
+import zlib
 from functools import lru_cache
 from pathlib import Path
-from time import perf_counter
 from typing import NamedTuple
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -33,6 +35,21 @@ async def validate_mermaid(mermaid_code: str) -> ValidationResult:
         error_msg = e.error.message
         error_msg = error_msg[error_msg.find(": ") + 2 :]
         return ValidationResult(False, error_msg)
+    
+
+def generate_mermaid_url(graph_code, theme="default"):
+    state = {
+        "code": graph_code,
+        "mermaid": {"theme": theme}
+    }
+    
+    json_str = json.dumps(state)
+    compressed = zlib.compress(json_str.encode('utf-8'), level=9)
+    base64_str = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
+    
+    return f"https://mermaid.ink/img/pako:{base64_str}"
+
+
 
 
 @lru_cache(maxsize=1)
@@ -54,8 +71,11 @@ if __name__ == "__main__":
     Alice->>+John: John, can you hear me?
     John-->>-Alice: Hi Alice, I can hear you!
     John-->>-Alice: I feel great!"""
-    start = perf_counter()
     result = asyncio.run(validate_mermaid(mmd_code))
-    end = perf_counter()
-    print(f"Result: {result}, \t time: {end - start} s")
-    print("\n", get_mermaid_reference())
+    
+    my_code = """sequenceDiagram
+    Alice->>+John: Hello John, how are you?
+    Alice->>+John: John, can you hear me?
+    John-->>-Alice: Hi Alice, I can hear you!
+    John-->>-Alice: I feel great!"""
+    print(generate_mermaid_url(my_code, "base"))
