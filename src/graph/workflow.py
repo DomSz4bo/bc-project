@@ -1,6 +1,5 @@
 from typing import Literal
 
-from langchain_core.globals import set_verbose
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -30,8 +29,6 @@ from src.graph.util_nodes import (
     prepare_fix_node,
     prepare_implementation_node,
 )
-
-set_verbose(True)
 
 
 async def supervisor_router(
