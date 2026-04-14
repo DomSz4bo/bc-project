@@ -1,11 +1,13 @@
 import asyncio
+import sys
 import traceback
 import uuid
+import warnings
 from os.path import samefile
 from pathlib import Path
-import warnings
 from typing import Any
 
+from langchain_core.globals import set_verbose
 from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import (
@@ -37,6 +39,8 @@ from src.graph.state import GraphContext
 from src.graph.workflow import create_graph
 from src.utils.skills import SkillManager
 from src.utils.streaming import CustomStreamData
+
+set_verbose(False)
 
 logger.remove()
 logger.add(".app_cli/logs/logs_{time:YYYY-MM-DD_HH-mm-ss}.log")
@@ -264,7 +268,9 @@ class InteractiveCLI:
             self.status.stop()
             self.full_response += msg_chunk.text
             self.console.print(msg_chunk.text, end="")
-    
+            with open("stream_log.txt", "a") as stream_log:
+                print(repr(msg_chunk.text), file=stream_log)
+
     def _print_node_name(self, node_name: str):
         self.console.print(Panel(f"{node_name}:"), style="bold blue3")
 
@@ -354,7 +360,8 @@ class InteractiveCLI:
 
 def main():
     """Synchronous entry point for the CLI"""
-    # warnings.filterwarnings("ignore")
+    warnings.filterwarnings("ignore")
+    sys.tracebacklimit = 0
     cli = InteractiveCLI()
     try:
         asyncio.run(cli.run())
