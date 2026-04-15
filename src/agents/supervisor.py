@@ -7,7 +7,9 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3p1_flash_lite as llm
+from src.utils.llm import build_fallback_chain
+from src.utils.llm import gemini_3p1_flash_lite as main_llm
+from src.utils.llm import gemma_4_31b as fallback_llm
 from src.utils.middleware import (
     LoggingMiddleware,
     ToolStreamingMiddleware,
@@ -113,7 +115,9 @@ async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
             skill_catalog = skill_manager.get_skill_catalog()
             system_prompt += SKILLS_ADD_ON.format(skill_catalog=skill_catalog)
 
-    llm_with_tools = llm.bind_tools(bound_tools)
+    llm_with_tools = build_fallback_chain(
+        main_llm.bind_tools(bound_tools), fallback_llm.bind_tools(bound_tools)
+    )
 
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
     response = await llm_with_tools.ainvoke(messages)

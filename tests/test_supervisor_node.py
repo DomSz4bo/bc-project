@@ -48,12 +48,15 @@ async def test_supervisor_intake_flow(mock_runtime):
     mock_response = AIMessage(content="What kind of authentication do you need?")
 
     with (
-        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as mock_llm,
+        patch("src.agents.supervisor.fallback_llm") as _,
+        patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
     ):
-        mock_bound_llm = AsyncMock()
-        mock_llm.bind_tools.return_value = mock_bound_llm
-        mock_bound_llm.ainvoke.return_value = mock_response
+
+        mock_llm_with_tools = AsyncMock()
+        mock_llm_with_tools.ainvoke.return_value = mock_response
+        mock_chain_builder.return_value = mock_llm_with_tools
 
         state = {
             "messages": [HumanMessage(content="I want to implement a login system.")],
@@ -67,8 +70,8 @@ async def test_supervisor_intake_flow(mock_runtime):
 
         mock_llm.bind_tools.assert_called_once_with([handoff_to_design])
 
-        mock_bound_llm.ainvoke.assert_called_once()
-        called_messages = mock_bound_llm.ainvoke.call_args[0][0]
+        mock_llm_with_tools.ainvoke.assert_called_once()
+        called_messages = mock_llm_with_tools.ainvoke.call_args[0][0]
         assert isinstance(called_messages[0], SystemMessage)
         assert "INTAKE" in called_messages[0].content
         assert "Axiom" in called_messages[0].content
@@ -84,12 +87,14 @@ async def test_supervisor_approval_flow(mock_runtime):
     sq_diagram = "sequenceDiagram ..."
 
     with (
-        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as mock_llm,
+        patch("src.agents.supervisor.fallback_llm") as _,
+        patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
     ):
-        mock_bound_llm = AsyncMock()
-        mock_llm.bind_tools.return_value = mock_bound_llm
-        mock_bound_llm.ainvoke.return_value = mock_response
+        mock_llm_with_tools = AsyncMock()
+        mock_llm_with_tools.ainvoke.return_value = mock_response
+        mock_chain_builder.return_value = mock_llm_with_tools
 
         state = {
             "messages": [HumanMessage(content="Explain the flow.")],
@@ -106,7 +111,7 @@ async def test_supervisor_approval_flow(mock_runtime):
             [handoff_to_design, handoff_to_implementation]
         )
 
-        called_messages = mock_bound_llm.ainvoke.call_args[0][0]
+        called_messages = mock_llm_with_tools.ainvoke.call_args[0][0]
         system_content = called_messages[0].content
         assert "APPROVAL" in system_content
         assert use_case in system_content
@@ -121,12 +126,14 @@ async def test_supervisor_post_implementation_flow_no_skills(mock_runtime_no_ski
     mock_response = AIMessage(content="The implementation is complete. Let's review.")
 
     with (
-        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as mock_llm,
+        patch("src.agents.supervisor.fallback_llm") as _,
+        patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
     ):
-        mock_bound_llm = AsyncMock()
-        mock_llm.bind_tools.return_value = mock_bound_llm
-        mock_bound_llm.ainvoke.return_value = mock_response
+        mock_llm_with_tools = AsyncMock()
+        mock_llm_with_tools.ainvoke.return_value = mock_response
+        mock_chain_builder.return_value = mock_llm_with_tools
 
         state = {
             "messages": [HumanMessage(content="What's the status?")],
@@ -139,7 +146,7 @@ async def test_supervisor_post_implementation_flow_no_skills(mock_runtime_no_ski
 
         mock_llm.bind_tools.assert_called_once_with(ACTION_TOOLS)
 
-        called_messages = mock_bound_llm.ainvoke.call_args[0][0]
+        called_messages = mock_llm_with_tools.ainvoke.call_args[0][0]
         system_content = called_messages[0].content
 
         assert "POST_IMPLEMENTATION" in system_content
@@ -154,12 +161,14 @@ async def test_supervisor_post_implementation_with_skills(mock_runtime_with_skil
     mock_response = AIMessage(content="I see the skills.")
 
     with (
-        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as _,
+        patch("src.agents.supervisor.fallback_llm") as _,
+        patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
     ):
-        mock_bound_llm = AsyncMock()
-        mock_llm.bind_tools.return_value = mock_bound_llm
-        mock_bound_llm.ainvoke.return_value = mock_response
+        mock_llm_with_tools = AsyncMock()
+        mock_llm_with_tools.ainvoke.return_value = mock_response
+        mock_chain_builder.return_value = mock_llm_with_tools
 
         state = {
             "messages": [HumanMessage(content="What skills are available?")],
@@ -168,7 +177,7 @@ async def test_supervisor_post_implementation_with_skills(mock_runtime_with_skil
 
         await supervisor(state, mock_runtime_with_skills)
 
-        called_messages = mock_bound_llm.ainvoke.call_args[0][0]
+        called_messages = mock_llm_with_tools.ainvoke.call_args[0][0]
         system_content = called_messages[0].content
 
         assert "test-skill" in system_content
@@ -191,12 +200,14 @@ async def test_supervisor_tool_handoff_call(mock_runtime):
     mock_response = AIMessage(content="", tool_calls=[tool_call])
 
     with (
-        patch("src.agents.supervisor.llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as _,
+        patch("src.agents.supervisor.fallback_llm") as _,
+        patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
     ):
-        mock_bound_llm = AsyncMock()
-        mock_llm.bind_tools.return_value = mock_bound_llm
-        mock_bound_llm.ainvoke.return_value = mock_response
+        mock_llm_with_tools = AsyncMock()
+        mock_llm_with_tools.ainvoke.return_value = mock_response
+        mock_chain_builder.return_value = mock_llm_with_tools
 
         state = {
             "messages": [HumanMessage(content="Go to design phase.")],
