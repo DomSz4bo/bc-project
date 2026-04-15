@@ -1,5 +1,6 @@
 import asyncio
 import locale
+import os
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -13,6 +14,9 @@ from src.graph.state import GraphContext
 
 @lru_cache(maxsize=1)
 def get_mcp_client():
+    working_directory_str = os.environ.get("BC_APP_CWD")
+    if not working_directory_str:
+        working_directory_str = str(Path.cwd())
     return MultiServerMCPClient(
         {
             "filesystem": {
@@ -21,7 +25,7 @@ def get_mcp_client():
                 "args": [
                     "-y",
                     "@modelcontextprotocol/server-filesystem",
-                    str(Path.cwd()),
+                    working_directory_str,
                 ],
             }
         }
