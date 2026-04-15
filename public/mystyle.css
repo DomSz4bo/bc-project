@@ -1,0 +1,29 @@
+.dark h1,
+.dark h2,
+.dark h3 {
+    color: aliceblue;
+}
+
+.dark #chat-input {
+    color: #64d631;
+}
+
+code {
+    color: #64d631;
+}
+
+.dark #message-composer {
+    border: solid 0.1rem #64d631;
+}
+
+.light #message-composer {
+    box-shadow: 3px 2px 3px #222421;
+}
+
+.text-card-foreground .text-muted-foreground {
+    color: hsl(0 0% 80%);
+}
+
+.logo.w-\[200px\] {
+    width: 120px;
+}
