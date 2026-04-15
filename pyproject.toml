@@ -22,6 +22,7 @@ dependencies = [
 
 [project.scripts]
 bc-cli = "cli.run_cli:main"
+bc-app = "cli.run_app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
