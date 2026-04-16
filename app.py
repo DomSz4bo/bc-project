@@ -131,6 +131,10 @@ class WorkflowApp:
             )
 
     async def _process_update_stream(self, chunk: UpdatesStreamPart) -> None:
+        if self.current_custom_step:
+            await self.current_custom_step.remove()
+            self.current_custom_step = None
+
         for node_name, updates in chunk["data"].items():
             node_step = cl.Step(name=f"✓ [{node_name}] completed task")
             node_step.status = "success"
@@ -141,18 +145,22 @@ class WorkflowApp:
                 node_step.output = update_content
                 await node_step.update()
 
-            if "use_case" in updates:
+            if "use_case" in updates and updates["use_case"]:
                 await cl.Message(updates["use_case"], "Design Lab").send()
 
-            if "sequence_diagram" in updates:
-                img_url = generate_mermaid_url(updates["sequence_diagram"], "base")
+            if "sequence_diagram" in updates and updates["sequence_diagram"]:
+                encoded_mmd = generate_mermaid_url(updates["sequence_diagram"], "base")
+                img_url = "https://mermaid.ink/img/" + encoded_mmd
                 image = cl.Image(
                     name="Sequence Diagram",
                     display="inline",
                     size="small",
                     url=img_url,
                 )
-                await cl.Message(content="", elements=[image]).send()
+                editor_url = f"https://mermaid.ai/live/edit#{encoded_mmd}"
+                await cl.Message(
+                    content=f"[Mermaid editor]({editor_url})", elements=[image]
+                ).send()
 
     def _process_node_update(
         self, node_name: str, updates: dict[str, Any]

@@ -35,21 +35,27 @@ async def validate_mermaid(mermaid_code: str) -> ValidationResult:
         error_msg = e.error.message
         error_msg = error_msg[error_msg.find(": ") + 2 :]
         return ValidationResult(False, error_msg)
-    
 
-def generate_mermaid_url(graph_code, theme="default"):
-    state = {
-        "code": graph_code,
-        "mermaid": {"theme": theme}
-    }
-    
+
+def extract_mermaid_code(markdown_mermaid: str) -> str:
+    return markdown_mermaid.strip("`").removeprefix("mermaid\n")
+
+
+def generate_mermaid_url(graph_code: str, theme="default") -> str:
+    """
+    Encodes the mermaid graph into a "pako:" string.
+    Useful for visualizing diagram on mermaid.ink or using importing to mermaid editors.
+    Handles graph code wrapped in markdown mermaid block correctly.
+    """
+    if graph_code.startswith("```"):
+        mmd_code = extract_mermaid_code(graph_code)
+    state = {"code": mmd_code, "mermaid": {"theme": theme}}
+
     json_str = json.dumps(state)
-    compressed = zlib.compress(json_str.encode('utf-8'), level=9)
-    base64_str = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
-    
-    return f"https://mermaid.ink/img/pako:{base64_str}"
+    compressed = zlib.compress(json_str.encode("utf-8"), level=9)
+    base64_str = base64.urlsafe_b64encode(compressed).decode("utf-8").replace("=", "")
 
-
+    return f"pako:{base64_str}"
 
 
 @lru_cache(maxsize=1)
@@ -72,10 +78,11 @@ if __name__ == "__main__":
     John-->>-Alice: Hi Alice, I can hear you!
     John-->>-Alice: I feel great!"""
     result = asyncio.run(validate_mermaid(mmd_code))
-    
+
     my_code = """sequenceDiagram
     Alice->>+John: Hello John, how are you?
     Alice->>+John: John, can you hear me?
     John-->>-Alice: Hi Alice, I can hear you!
     John-->>-Alice: I feel great!"""
-    print(generate_mermaid_url(my_code, "base"))
+    img_url = "https://mermaid.ink/img/" + generate_mermaid_url(my_code, "base")
+    print(img_url)

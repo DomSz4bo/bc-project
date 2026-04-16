@@ -20,8 +20,11 @@ from src.utils.llm import (
     gemini_3p1_flash_lite,
     gemma_4_31b,
 )
-from src.utils.markdown import extract_block
-from src.utils.mermaid import get_mermaid_reference, validate_mermaid
+from src.utils.mermaid import (
+    extract_mermaid_code,
+    get_mermaid_reference,
+    validate_mermaid,
+)
 from src.utils.streaming import CustomStreamData
 
 llm = build_fallback_chain(gemini_3_flash, gemini_3p1_flash_lite, gemma_4_31b)
@@ -122,7 +125,7 @@ async def _run_validation_cycle(
     for generation_n in range(validation_limit):
         response = await _generate_diagram(messages, generation_n, writer)
         text_response = response.text
-        mmd_code = extract_block(text_response, "mermaid")
+        mmd_code = extract_mermaid_code(text_response)
 
         writer(CustomStreamData("Checking diagram syntax validity", "start"))
         validation_result = await validate_mermaid(mmd_code)
