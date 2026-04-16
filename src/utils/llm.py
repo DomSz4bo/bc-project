@@ -2,6 +2,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
+from langchain.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda, RunnableSerializable
@@ -11,7 +12,10 @@ load_dotenv()
 
 
 def build_fallback_chain(
-    primary: BaseChatModel, *fallbacks: BaseChatModel
+    primary: BaseChatModel,
+    *fallbacks: BaseChatModel,
+    tools: list[BaseTool] | None = None,
+    schema: dict[str, Any] | type | None = None,
 ) -> RunnableSerializable[Any, AIMessage]:
     """
     Builds a fallback chain of models with logging in between.
@@ -19,13 +23,28 @@ def build_fallback_chain(
     The error that triggered the fallback is logged for debugging.
 
     Args:
-        primary_model: The first model that will be tried.
+        primary: The first model that will be tried.
         fallbacks: Fallback models in order.
+        tools: Optional list of tools to bind to all models.
+        schema: Optional Pydantic model or JSON schema for structured output.
     """
     if not fallbacks:
         raise ValueError(
             "At least one fallback must be provided to create a fallback chain."
         )
+
+    if tools is not None and schema is not None:
+        raise ValueError("Can not bind tools and also use structured output.")
+
+    def apply_capability(model: BaseChatModel):
+        if schema:
+            return model.with_structured_output(schema)
+        if tools:
+            return model.bind_tools(tools)
+        return model
+
+    primary_model = apply_capability(primary)
+    fallback_models = [apply_capability(f) for f in fallbacks]
 
     def prepare_input(x: Any) -> Any:
         """Extracts the actual input from the wrapper dict if present."""
@@ -33,12 +52,11 @@ def build_fallback_chain(
             return x["input"]
         return x
 
-    primary_chain = RunnableLambda(prepare_input) | primary
+    primary_chain = RunnableLambda(prepare_input) | primary_model
 
     fallback_chains = []
 
-    for i in range(len(fallbacks)):
-        model_to_use = fallbacks[i]
+    for i, model_to_use in enumerate(fallback_models):
 
         def create_log_wrapper(model_idx: int):
             def log_error(input_dict: dict):
