@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from src.agents.design_lab.architect import architect
+from src.agents.design_lab.architect import architect, ArchitectOutput
 from src.utils.mermaid import ValidationResult
 
 
@@ -12,16 +12,18 @@ async def test_architect_generation():
     """
     Verify the architect node generates a sequence diagram from a use case.
     """
-    mock_diagram = """```mermaid
-    sequenceDiagram
+    mock_diagram = """```mermaid\nsequenceDiagram
     Alice->>+John: Hello John, how are you?
     Alice->>+John: John, can you hear me?
     John-->>-Alice: Hi Alice, I can hear you!
-    John-->>-Alice: I feel great!```"""
-    mock_response = AIMessage(content=mock_diagram)
+    John-->>-Alice: I feel great!\n```"""
+
+    mock_response = ArchitectOutput(
+        reasoning="mock reason", sequence_diagram=mock_diagram
+    )
 
     with (
-        patch("src.agents.design_lab.architect.llm") as mock_llm,
+        patch("src.agents.design_lab.architect.llm_with_structure") as mock_llm,
         patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
     ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
@@ -60,11 +62,13 @@ sequenceDiagram
     Alice->>+John: Hello John, how are you?
     Alice->>+John: John, can you hear me?
     John-->>-Alice: Hi Alice, I can hear you!
-    John-->>-Alice: I feel great!```"""
-    mock_response = AIMessage(content=mock_diagram)
+    John-->>-Alice: I feel great!\n```"""
+    mock_response = ArchitectOutput(
+        reasoning="mock reason", sequence_diagram=mock_diagram
+    )
 
     with (
-        patch("src.agents.design_lab.architect.llm") as mock_llm,
+        patch("src.agents.design_lab.architect.llm_with_structure") as mock_llm,
         patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
     ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
@@ -104,7 +108,7 @@ async def test_architect_missing_use_case():
     """
     mock_response = AIMessage(content="Nothing")
     with (
-        patch("src.agents.design_lab.architect.llm") as mock_llm,
+        patch("src.agents.design_lab.architect.llm_with_structure") as mock_llm,
         patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
     ):
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
@@ -123,15 +127,15 @@ async def test_architect_fix_syntax():
     Veriy that the syntax validation cycle is initiated.
     """
     mock_responses = [
-        AIMessage(content="```mermaid\n invalid_diagram \n```"),
-        AIMessage(content="```mermaid\n valid_diagram \n```"),
+        ArchitectOutput(reasoning="mock reason", sequence_diagram="```mermaid\ninvalid_diagram\n```"),
+        ArchitectOutput(reasoning="mock reason", sequence_diagram="```mermaid\nvalid_diagram\n```"),
     ]
     mock_validations = [
         ValidationResult(False, "It's wrong."),
         ValidationResult(True),
     ]
     with (
-        patch("src.agents.design_lab.architect.llm") as mock_llm,
+        patch("src.agents.design_lab.architect.llm_with_structure") as mock_llm,
         patch("src.agents.design_lab.architect.validate_mermaid") as mock_validation,
         patch("src.agents.design_lab.architect.get_stream_writer") as mock_writer,
     ):
@@ -149,7 +153,7 @@ async def test_architect_fix_syntax():
         command = await architect(state, mock_runtime)
         result = command.update
 
-        assert result["sequence_diagram"] == mock_responses[1].content
+        assert result["sequence_diagram"] == mock_responses[1].sequence_diagram
 
         assert mock_llm.ainvoke.call_count == 2
         called_messages = mock_llm.ainvoke.call_args.args[0]

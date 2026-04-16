@@ -11,6 +11,7 @@ from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 from langgraph.types import Command, StreamWriter
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from src.graph.node_names import Nodes
 from src.graph.state import AgentState, GraphContext
@@ -27,7 +28,19 @@ from src.utils.mermaid import (
 )
 from src.utils.streaming import CustomStreamData
 
-llm = build_fallback_chain(gemini_3_flash, gemini_3p1_flash_lite, gemma_4_31b)
+
+class ArchitectOutput(BaseModel):
+    reasoning: str = Field(
+        description="Step-by-step analysis and plan for the sequence diagram, including identifying participants, mapping out the main flow, and handling extensions or diagnosing parser errors if applicable."
+    )
+    sequence_diagram: str = Field(
+        description="The raw Mermaid.js sequence diagram code."
+    )
+
+
+llm_with_structure = build_fallback_chain(
+    gemini_3_flash, gemini_3p1_flash_lite, gemma_4_31b, schema=ArchitectOutput
+)
 
 
 async def architect(
@@ -54,7 +67,7 @@ async def architect(
         writer(CustomStreamData("Sequence diagram successfully created.", "end"))
         return Command(
             goto=Nodes.CRITIC,
-            update={"sequence_diagram": diagram},
+            update={"sequence_diagram": f"```mermaid\n{diagram}\n```"},
         )
 
     logger.info(
@@ -112,8 +125,10 @@ def _build_messages(state: AgentState) -> list[AnyMessage]:
         critic_feedback = state.get("critic_feedback")
         previous_diagram = state.get("sequence_diagram")
         messages += [
-            AIMessage(previous_diagram),
-            HumanMessage(critic_feedback),
+            AIMessage(f"Diagram:\n```mermaid\n{previous_diagram}\n```"),
+            HumanMessage(
+                f"The Design Critic has reviewed your diagram against the Use Case and rejected it with the following feedback:\n\n<critic_feedback>\n{critic_feedback}\n</critic_feedback>\n\nPlease analyze this feedback in your reasoning and generate a completely revised sequence diagram that addresses all mentioned issues."
+            ),
         ]
 
     return messages
@@ -123,9 +138,11 @@ async def _run_validation_cycle(
     messages: list[AnyMessage], validation_limit: int, writer: StreamWriter
 ):
     for generation_n in range(validation_limit):
-        response = await _generate_diagram(messages, generation_n, writer)
-        text_response = response.text
-        mmd_code = extract_mermaid_code(text_response)
+        response: ArchitectOutput = await _generate_diagram(
+            messages, generation_n, writer
+        )
+
+        mmd_code = extract_mermaid_code(response.sequence_diagram)
 
         writer(CustomStreamData("Checking diagram syntax validity", "start"))
         validation_result = await validate_mermaid(mmd_code)
@@ -134,19 +151,23 @@ async def _run_validation_cycle(
 
         logger.info(f"Architect - invalid syntax for check n.{generation_n + 1}")
 
+        ai_message_content = (
+            f"Reasoning:\n{response.reasoning}\n\nDiagram:\n```mermaid\n{mmd_code}\n```"
+        )
+
         messages += [
-            AIMessage(text_response),
+            AIMessage(ai_message_content),
             HumanMessage(
                 DIAGRAM_FIX_PROMPT.format(error=validation_result.error_message)
             ),
         ]
 
-    return text_response, validation_result.is_valid
+    return mmd_code, validation_result.is_valid
 
 
 async def _generate_diagram(
     messages: list[AnyMessage], try_number: int, writer: StreamWriter
-) -> AIMessage:
+) -> ArchitectOutput:
     if try_number > 0:
         writer(
             CustomStreamData(
@@ -164,7 +185,7 @@ async def _generate_diagram(
             )
         )
 
-    response = await llm.ainvoke(messages)
+    response = await llm_with_structure.ainvoke(messages)
     return response
 
 
@@ -180,19 +201,45 @@ You will receive a Cockburn Use Case. It contains:
 - Extensions (deviations from the main scenario, e.g., 2a, 3a).
 
 You may also receive additional instructions (e.g. diagramming guidance, required elements, etc.).
-Ignore instructions that are irrelevant to your task.
 
 ---
 
 ## OUTPUT
 
-Return only the raw Mermaid code block. No preamble, no explanation, no commentary before or after.
+Provide your step-by-step reasoning in the `reasoning` field.
+1. Identify the exact participants.
+2. Map out the Main Success Scenario steps.
+3. Plan how Extensions (deviations) will be represented using `alt`, `opt`, or `loop` blocks.
 
-Example of the required format:
-```mermaid
-sequenceDiagram
-  ...
-```
+Provide the final sequence diagram in the `sequence_diagram` field.
+
+### EXAMPLE
+**Input Use Case:**
+1. User requests data from API.
+2. API validates token.
+   2a. Token invalid: API returns 401. Use case ends.
+3. API returns data to User.
+
+**Expected Output (conceptual):**
+- reasoning:
+  - Participants: User, API
+  - Main flow: Request data -> Validate token -> Return data
+  - Extension 2a: Needs an `alt` block for the token validation outcome.
+- sequence_diagram:
+  ```mermaid
+  sequenceDiagram
+      actor User
+      participant API
+      
+      User->>+API: Request data
+      Note over API: Validates token
+      
+      alt Token is invalid (2a)
+          API-->>User: 401 Unauthorized
+      else Token is valid
+          API-->>-User: Return data
+      end
+  ```
 
 ---
 
@@ -213,6 +260,7 @@ sequenceDiagram
 - Use whichever features most faithfully represent the Use Case logic.
 - Do not use features decoratively — every construct must be justified by the Use Case.
 - Use activation bars to show that objects are active using `activate` and `deactivate`. You can also use the shortcut notation by appending `+` or `-` suffix to a message arrow.
+- Never leave a control flow block empty. It must contain another block, statement or at least a note.
 
 ### Faithfulness vs. Comprehensibility
 When these two goals conflict, faithfulness wins. An accurate diagram that is slightly harder to read is preferable to a clean diagram that misrepresents the Use Case.
@@ -227,15 +275,9 @@ DIAGRAM_FIX_PROMPT = """
 ❌ MERMAID VALIDATION FAILED:
 {error}
 
-**REQUIRED ACTIONS:**
-1. **ANALYZE the error message** above from Mermaid's parser
-2. **GENERATE CORRECTED Mermaid code** that fixes the identified problem
+Your previous diagram contained a syntax error.
 
-**COMMON FIXES for Mermaid errors:**
-- Check for missing arrows
-- Verify node syntax and quotes
-- Ensure proper diagram type declaration
-- Fix special character escaping
-- Check for proper indentation
-- Validate connection syntax
+**REQUIRED ACTIONS:**
+1. In your `reasoning` field, analyze the error message above from Mermaid's parser and diagnose what caused it.
+2. In your `sequence_diagram` field, generate the fully corrected Mermaid code. Do not truncate or omit parts of the diagram.
 """
