@@ -213,34 +213,6 @@ Provide your step-by-step reasoning in the `reasoning` field.
 
 Provide the final sequence diagram in the `sequence_diagram` field.
 
-### EXAMPLE
-**Input Use Case:**
-1. User requests data from API.
-2. API validates token.
-   2a. Token invalid: API returns 401. Use case ends.
-3. API returns data to User.
-
-**Expected Output (conceptual):**
-- reasoning:
-  - Participants: User, API
-  - Main flow: Request data -> Validate token -> Return data
-  - Extension 2a: Needs an `alt` block for the token validation outcome.
-- sequence_diagram:
-  ```mermaid
-  sequenceDiagram
-      actor User
-      participant API
-      
-      User->>+API: Request data
-      Note over API: Validates token
-      
-      alt Token is invalid (2a)
-          API-->>User: 401 Unauthorized
-      else Token is valid
-          API-->>-User: Return data
-      end
-  ```
-
 ---
 
 ## DIAGRAMMING RULES
