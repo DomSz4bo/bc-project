@@ -1,12 +1,30 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.config import get_stream_writer
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from src.graph.state import AgentState
-from src.utils.llm import build_fallback_chain, gemini_3p1_flash_lite, gemma_4_31b
+from src.utils.llm import (
+    build_fallback_chain,
+    gemini_2p5_flash,
+    gemini_3p1_flash_lite,
+    gemma_4_31b,
+)
 from src.utils.streaming import CustomStreamData
 
-llm = build_fallback_chain(gemini_3p1_flash_lite, gemma_4_31b)
+
+class AnalystOutput(BaseModel):
+    reasoning: str = Field(
+        description="Detailed reasoning and planning phase. Identify actors, map the happy path, and brainstorm edge cases."
+    )
+    use_case: str = Field(
+        description="The final Cockburn 'Sea-Level' Use Case in Markdown format, strictly following the template."
+    )
+
+
+llm_with_structure = build_fallback_chain(
+    gemini_2p5_flash, gemini_3p1_flash_lite, gemma_4_31b, schema=AnalystOutput
+)
 
 
 async def analyst(state: AgentState) -> AgentState:
@@ -22,31 +40,23 @@ async def analyst(state: AgentState) -> AgentState:
     logger.info("Analyst node initiated.")
 
     user_intent_summary = state.get("user_intent_summary")
-    desing_notes = state.get("design_notes")
 
     if not user_intent_summary:
         raise ValueError("No user_intent_summary found in AgentState.")
 
     message = f"# USER INTENT SUMMARY:<user_intent_summary>\n\n{user_intent_summary}\n</user_intent_summary>"
-    if desing_notes:
-        message = message + (
-            "\n\n## Additional notes and instructions.\n"
-            "Ignore instructions that are not relevant for your task.\n"
-            f"<instructions>\n{desing_notes}\n</instructions>"
-        )
-
     messages = [
         SystemMessage(SYSTEM_PROMPT),
         HumanMessage(message),
     ]
 
-    response = await llm.ainvoke(messages)
+    response: AnalystOutput = await llm_with_structure.ainvoke(messages)
 
     writer(CustomStreamData("Use Case created.", type="end"))
     logger.info("Analyst completed Use Case generation.")
 
     return {
-        "use_case": response.text,
+        "use_case": response.use_case,
     }
 
 
@@ -58,13 +68,24 @@ Your job is to transform a User Intent Summary into a structured Cockburn "Sea-L
 Use Case. This Use Case will be reviewed by the user, so it must be clear, accurate, 
 and self-contained.
 
+## Reasoning Phase
+Before drafting the Use Case, you must use the `reasoning` field to:
+1. **Identify Actors:** Determine the Primary Actor (who initiates) and Secondary Actors (external systems/DBs).
+2. **Map the Happy Path:** Outline the logical flow of the Main Success Scenario.
+3. **Brainstorm Extensions:** Identify potential failure points, validation errors, or alternative paths based on common software patterns.
+4. **Self-Correction:** Ensure all planned steps are at "sea-level" (exchange/decision) and not internal implementation details.
+
 ## Your Input
 You will receive a single User Intent Summary. This summary is your complete and 
-authoritative source of truth. Do not infer context beyond what is written. Do not 
-question or hedge against it.
+authoritative source of truth. Do not infer context beyond what is written for the 
+core goals.
 
 ## Your Output
-You must produce a Use Case that strictly follows this template — every section is 
+You are configured to output a structured JSON object. 
+1. Use the `reasoning` field for your detailed analysis and planning.
+2. Populate the `use_case` field with a raw string containing the final Use Case. 
+
+The string in the `use_case` field MUST strictly follow this Markdown template — every section is 
 mandatory and must be populated:
 <template>
 # USE CASE: [Name]
