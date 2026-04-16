@@ -24,6 +24,8 @@ from src.utils.streaming import CustomStreamData
 
 shared_graph = create_graph()
 
+SHOW_SUBAGENT_OUTPUTS = True
+SHOW_STATE_UPDATES = False
 
 class WorkflowApp:
     def __init__(self, graph: CompiledStateGraph):
@@ -78,6 +80,7 @@ class WorkflowApp:
 
         elif data.type == "end" and self.current_custom_step:
             self.current_custom_step.status = "success"
+            self.current_custom_step.name = data.message
             await self.current_custom_step.update()
             self.current_custom_step = None
 
@@ -117,7 +120,7 @@ class WorkflowApp:
                 self.current_node_step.status = "success"
                 await self.current_node_step.send()
                 self.current_node_step = None
-        else:
+        elif SHOW_SUBAGENT_OUTPUTS:
             if not self.current_node_step:
                 self.current_node_step = cl.Step(node_name)
 
@@ -136,14 +139,15 @@ class WorkflowApp:
             self.current_custom_step = None
 
         for node_name, updates in chunk["data"].items():
-            node_step = cl.Step(name=f"✓ [{node_name}] completed task")
-            node_step.status = "success"
-            await node_step.send()
+            if SHOW_STATE_UPDATES:
+                node_step = cl.Step(name=f"✓ [{node_name}] completed task")
+                node_step.status = "success"
+                await node_step.send()
 
-            update_content = self._process_node_update(node_name, updates)
-            if update_content:
-                node_step.output = update_content
-                await node_step.update()
+                update_content = self._process_node_update(node_name, updates)
+                if update_content:
+                    node_step.output = update_content
+                    await node_step.update()
 
             if "use_case" in updates and updates["use_case"]:
                 await cl.Message(updates["use_case"], "Design Lab").send()
