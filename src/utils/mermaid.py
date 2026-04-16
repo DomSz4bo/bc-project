@@ -4,6 +4,7 @@ import json
 import zlib
 from functools import lru_cache
 from pathlib import Path
+from string import whitespace
 from typing import NamedTuple
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -38,7 +39,7 @@ async def validate_mermaid(mermaid_code: str) -> ValidationResult:
 
 
 def extract_mermaid_code(markdown_mermaid: str) -> str:
-    return markdown_mermaid.strip("`").removeprefix("mermaid\n")
+    return markdown_mermaid.strip(whitespace + "`").removeprefix("mermaid").strip()
 
 
 def generate_mermaid_url(graph_code: str, theme="default") -> str:
