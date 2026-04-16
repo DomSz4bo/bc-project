@@ -17,22 +17,19 @@ from src.utils.streaming import CustomStreamData
 
 
 class CriticOutput(BaseModel):
-    verdict: Literal["PASS", "FAIL"] = Field(
-        description=("The verdict, FAIL if the diagram needs fixing else PASS.")
+    analysis: str = Field(
+        description="Step-by-step analysis of the sequence diagram against the Use Case. Go through the Audit Checklist sequentially."
     )
-    feedback: str | None = Field(
-        default=None,
-        description=(
-            "If the verdict is FAIL, give concrete instructions on how to fix the problems. "
-            "Else omit this field."
-        ),
+    verdict: Literal["PASS", "FAIL"] = Field(
+        description="The final verdict. FAIL if the diagram misses requirements or has logical errors. PASS if it is a complete, faithful representation."
+    )
+    feedback: str = Field(
+        description="If FAIL, provide a numbered list of concrete, surgical instructions for the Architect to fix the diagram. If PASS, provide a brief approval summary.",
     )
 
 
 llm_with_structure = build_fallback_chain(
-    gemini_2p5_flash.with_structured_output(CriticOutput),
-    gemini_3p1_flash_lite.with_structured_output(CriticOutput),
-    gemma_4_31b.with_structured_output(CriticOutput),
+    gemini_2p5_flash, gemini_3p1_flash_lite, gemma_4_31b, schema=CriticOutput
 )
 
 
@@ -90,30 +87,33 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     }
 
 
-SYSTEM_PROMPT = """You are the Design Critic. Your role is to audit a Mermaid Sequence Diagram against a Cockburn Use Case.
+SYSTEM_PROMPT = """You are the Design Critic. Your role is to rigorously audit a Mermaid Sequence Diagram against a Cockburn Use Case.
 
 ### Core Mandate
-The Use Case is the GROUND TRUTH. Your job is to identify semantic inconsistencies, logical gaps, and missing requirements in the Sequence Diagram. Do not critique the Use Case.
+The Use Case is the GROUND TRUTH. Your job is to identify semantic inconsistencies, logical gaps, and missing requirements in the Sequence Diagram. Do NOT critique or alter the Use Case.
 
 ### Audit Checklist
-1. **Actor Alignment**: Ensure all Primary/Secondary actors from the Use Case are present as participants. Verify no essential internal systems are missing.
-2. **MSS Fidelity**: Every numbered step in the Main Success Scenario must be represented by chronological message arrows. Identify any "logical holes" where the system jumps between states without a transition.
-3. **Extension Coverage**: Every Extension in the Use Case has a corresponding conditional or flow-control block (alt, opt, break, loop) in the diagram, and the chosen block type is appropriate for the nature of that extension.
-4. **Semantic Precision**: Message labels must be descriptive and technically accurate. Arrow directions must reflect the correct request/response flow.
-5. **Architectural Clarity**: Suggest improvements for readability or technical depth where the current modeling is ambiguous or over-simplified.
-6. **Mermaid diagram quality**: Correct use of concepts and mermaid features.
+You must analyze the following points step-by-step:
+1. **Actor Alignment**: Are all Primary/Secondary actors and internal systems from the Use Case present as participants? Are there any unmentioned actors?
+2. **MSS Fidelity (Main Success Scenario)**: Is every numbered step in the MSS represented by chronological message arrows? Are there any missing state transitions or unexplained logical jumps?
+3. **Extension Coverage**: Does every Extension (alternative flow) have a corresponding conditional block (e.g., `alt`, `opt`, `break`, `loop`)? Are the conditions accurately labeled based on the Use Case?
+4. **Semantic Precision**: Do the message labels accurately reflect the actions described? Do arrow directions (Request `->>` vs Response `-->>`) correctly reflect the flow of data/control?
+5. **Diagram Mechanics**: Are lifelines activated/deactivated properly if applicable? Are block structures nested correctly?
 
 ### Output Requirements
-- Provide a `PASS` verdict only if the diagram is a complete and faithful representation.
-- On `FAIL`, provide surgical, numbered feedback referencing specific Use Case steps or extensions.
-- Syntax is pre-validated; focus exclusively on semantic alignment and logical completeness."""
+- Use the `analysis` field to document your step-by-step evaluation against the checklist.
+- Render a `FAIL` verdict if ANY requirement from the Use Case is missing, misrepresented, or logically flawed.
+- If `FAIL`, the `feedback` field MUST contain a precise, numbered list of required fixes referencing specific Use Case steps or extensions. 
+- Render a `PASS` verdict ONLY if the diagram is a complete, faithful, and technically sound representation of the Use Case."""
 
 
 HUMAN_MSG = """Please audit the following Sequence Diagram against the provided Use Case.
 
-[GROUND TRUTH USE CASE]
+<use_case>
 {use_case}
+</use_case>
 
-[CANDIDATE MERMAID DIAGRAM]
+<sequence_diagram>
 {sequence_diagram}
+</sequence_diagram>
 """

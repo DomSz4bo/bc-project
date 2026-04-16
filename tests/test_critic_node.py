@@ -11,7 +11,10 @@ async def test_critic_pass():
     """
     Verify the critic node returns PASS when the diagram is correct.
     """
-    mock_output = CriticOutput(verdict="PASS", feedback=None)
+    mock_feedback = "All good"
+    mock_output = CriticOutput(
+        analysis="mock analysis", verdict="PASS", feedback=mock_feedback
+    )
 
     with (
         patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm,
@@ -32,9 +35,8 @@ async def test_critic_pass():
 
         assert result["critic_verdict"] == "PASS"
         assert result["revision_count"] == 0
-        assert result["critic_feedback"] is None
+        assert result["critic_feedback"] == mock_feedback
 
-        # Verify inputs to LLM
         mock_llm.ainvoke.assert_called_once()
         called_messages = mock_llm.ainvoke.call_args[0][0]
         assert isinstance(called_messages[0], SystemMessage)
@@ -49,7 +51,10 @@ async def test_critic_fail():
     """
     Verify the critic node returns FAIL and increments revision_count.
     """
-    mock_output = CriticOutput(verdict="FAIL", feedback="Missing step.")
+    mock_feedback = "Missing step."
+    mock_output = CriticOutput(
+        analysis="mock analysis", verdict="FAIL", feedback=mock_feedback
+    )
 
     with (
         patch("src.agents.design_lab.critic.llm_with_structure") as mock_llm,
@@ -70,7 +75,7 @@ async def test_critic_fail():
 
         assert result["critic_verdict"] == "FAIL"
         assert result["revision_count"] == 2
-        assert result["critic_feedback"] == "Missing step."
+        assert result["critic_feedback"] == mock_feedback
 
 
 @pytest.mark.asyncio
