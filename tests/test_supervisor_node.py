@@ -48,7 +48,7 @@ async def test_supervisor_intake_flow(mock_runtime):
     mock_response = AIMessage(content="What kind of authentication do you need?")
 
     with (
-        patch("src.agents.supervisor.main_llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as _,
         patch("src.agents.supervisor.fallback_llm") as _,
         patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
@@ -68,7 +68,9 @@ async def test_supervisor_intake_flow(mock_runtime):
         assert "messages" in result
         assert result["messages"] == [mock_response]
 
-        mock_llm.bind_tools.assert_called_once_with([handoff_to_design])
+        mock_chain_builder.assert_called_once()
+        assert "tools" in mock_chain_builder.call_args.kwargs
+        assert mock_chain_builder.call_args.kwargs["tools"] == [handoff_to_design]
 
         mock_llm_with_tools.ainvoke.assert_called_once()
         called_messages = mock_llm_with_tools.ainvoke.call_args[0][0]
@@ -87,7 +89,7 @@ async def test_supervisor_approval_flow(mock_runtime):
     sq_diagram = "sequenceDiagram ..."
 
     with (
-        patch("src.agents.supervisor.main_llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as _,
         patch("src.agents.supervisor.fallback_llm") as _,
         patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
@@ -107,9 +109,9 @@ async def test_supervisor_approval_flow(mock_runtime):
 
         assert result["messages"] == [mock_response]
 
-        mock_llm.bind_tools.assert_called_once_with(
-            [handoff_to_design, handoff_to_implementation]
-        )
+        mock_chain_builder.assert_called_once()
+        assert "tools" in mock_chain_builder.call_args.kwargs
+        assert mock_chain_builder.call_args.kwargs["tools"] == [handoff_to_design, handoff_to_implementation]
 
         called_messages = mock_llm_with_tools.ainvoke.call_args[0][0]
         system_content = called_messages[0].content
@@ -126,7 +128,7 @@ async def test_supervisor_post_implementation_flow_no_skills(mock_runtime_no_ski
     mock_response = AIMessage(content="The implementation is complete. Let's review.")
 
     with (
-        patch("src.agents.supervisor.main_llm") as mock_llm,
+        patch("src.agents.supervisor.main_llm") as _,
         patch("src.agents.supervisor.fallback_llm") as _,
         patch("src.agents.supervisor.build_fallback_chain") as mock_chain_builder,
         patch("src.agents.supervisor.get_stream_writer") as _,
@@ -144,7 +146,9 @@ async def test_supervisor_post_implementation_flow_no_skills(mock_runtime_no_ski
 
         assert result["messages"] == [mock_response]
 
-        mock_llm.bind_tools.assert_called_once_with(ACTION_TOOLS)
+        mock_chain_builder.assert_called_once()
+        assert "tools" in mock_chain_builder.call_args.kwargs
+        assert mock_chain_builder.call_args.kwargs["tools"] == ACTION_TOOLS
 
         called_messages = mock_llm_with_tools.ainvoke.call_args[0][0]
         system_content = called_messages[0].content

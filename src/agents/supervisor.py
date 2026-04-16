@@ -31,16 +31,17 @@ class DesignInput(BaseModel):
     user_intent_summary: str = Field(
         description=(
             "The summarized goal of the user. This should encompass the whole system. "
-            "Be detailed, include anything that may help the design team adhere to the user's requirements of the final system. "
-            "Do not use this to give instructions on how to modify previous iterations. "
-            "For update instructions use the `instructions` field. "
+            "Be detailed, include anything that may help the analyst adhere "
+            "to the user's requirements and create a faithful use case. "
+            "Do NOT refer to previous iterations."
         )
     )
     instructions: str | None = Field(
         default=None,
         description=(
-            "Optional: Specific instructions from the user for the Design Lab members ",
-            "(e.g., 'Do not use mermaid critical blocks in the diagram.', 'Use activations in the diagram.')",
+            "Optional: Specific instructions from the user for the sequence diagram creator. "
+            "Never refer to previous iterations. "
+            "(e.g., 'Do not use mermaid `critical` blocks in the diagram.', 'Use activations in the diagram.')"
         ),
     )
 
@@ -115,9 +116,7 @@ async def supervisor(state: AgentState, runtime: Runtime[GraphContext]) -> Agent
             skill_catalog = skill_manager.get_skill_catalog()
             system_prompt += SKILLS_ADD_ON.format(skill_catalog=skill_catalog)
 
-    llm_with_tools = build_fallback_chain(
-        main_llm.bind_tools(bound_tools), fallback_llm.bind_tools(bound_tools)
-    )
+    llm_with_tools = build_fallback_chain(main_llm, fallback_llm, tools=bound_tools)
 
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
     response = await llm_with_tools.ainvoke(messages)
@@ -197,8 +196,8 @@ You have access to specialized tools to transition between phases of the develop
 1. **`handoff_to_design`**:
    - **When:** Use this only when the INTAKE phase is complete and the requirements are airtight.
    - **Key Arguments:**
-     - `user_intent_summary`: The technical requirements document.
-     - `instructions`: Specific meta-guidance or constraints for the Design team. (e.g., 'Do not use mermaid critical blocks in the diagram.', 'Use activations in the diagram.')
+     - `user_intent_summary`: The technical requirements document with information necessary to create a use case.
+     - `instructions`: Optional instructions from the user for the sequence diagram creator. (e.g., 'Do not use mermaid critical blocks in the diagram.', 'Use activations in the diagram.')
    - **Effect:** Signals the end of your turn and moves the workflow into the Design Lab.
 
 The design team creates a structured Use case and complementing Sequence diagram. Once these design artifacts are created you will be moved to an APPROVAL phase, where the user will have the chance to approve or modify the design before you pass it on to be implemented by the implementation team. 
@@ -257,11 +256,12 @@ Remember the intent is the summary of the whole system and its expected behaviou
 You have access to specialized tools to transition between phases of the development pipeline. Using these tools is the ONLY way to move the project forward.
 
 1. **`handoff_to_design`**:
-   - **When:** Use this only when the user wants to MODIFY the current design and the changes is are well defined.
+   - **When:** Use this only when the user wants to MODIFY the current design and the changes are well defined.
    - **Key Arguments:**
      - `user_intent_summary`: The revised requirements document.
-     - `instructions` (Optional): Specific meta-guidance or constraints for the Design team.
+     - `instructions`: Optional instructions from the user for the sequence diagram creator.
    - **Effect:** Signals the end of your turn and moves the workflow into the Design Lab.
+   - **Note:** Do NOT refer to previous design iterations in the arguments.
 
 2. **`handoff_to_implementation`**:
    - **When:** Use this only when the user has explicitly APPROVED the design documents in the APPROVAL phase.
