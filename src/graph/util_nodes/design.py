@@ -4,7 +4,7 @@ from loguru import logger
 
 from src.agents.supervisor import DESIGN_HANDOFF
 from src.graph.state import AgentState
-from src.utils.llm import gemma_3_27b
+from src.utils.llm import gemma_4_31b as llm
 from src.utils.streaming import CustomStreamData
 
 
@@ -44,7 +44,7 @@ async def prepare_design_node(state: AgentState) -> AgentState:
 
 async def finish_design_node(state: AgentState) -> AgentState:
     """
-    Summarizes the results of the Design Lab using gemma_3_27b and
+    Summarizes the results of the Design Lab using an llm call and
     overwrites the initial ToolMessage with the final technical briefing.
     """
     use_case = state.get("use_case", "")
@@ -80,7 +80,7 @@ STYLE RULES:
 {diagram}
 """
     try:
-        response = await gemma_3_27b.ainvoke(prompt)
+        response = await llm.ainvoke(prompt)
         summary = response.text
     except Exception as error:
         logger.warning("Failed to summarize design output.")

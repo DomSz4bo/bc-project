@@ -93,5 +93,4 @@ gemini_2p5_flash_lite = init_chat_model(
 gemini_3p1_flash_lite = init_chat_model(
     "gemini-3.1-flash-lite-preview", model_provider="google_genai"
 )
-gemma_3_27b = init_chat_model("gemma-3-27b-it", model_provider="google_genai")
 gemma_4_31b = init_chat_model("gemma-4-31b-it", model_provider="google_genai")
