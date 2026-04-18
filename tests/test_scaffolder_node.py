@@ -9,7 +9,6 @@ from src.graph.state import AgentState
 
 @pytest.mark.asyncio
 async def test_scaffolder_logic(tmp_path):
-    # Setup
     working_dir = tmp_path / "project"
     working_dir.mkdir()
 
@@ -39,7 +38,8 @@ sequenceDiagram
     mock_runtime.context = {"working_directory": working_dir}
 
     mock_plan = ScaffoldPlan(
-        components=[Component(class_name="System", file_name="system")]
+        analysis="mock_analysis",
+        components=[Component(class_name="System", file_name="system")],
     )
 
     with (

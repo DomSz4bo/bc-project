@@ -24,6 +24,9 @@ class Component(BaseModel):
 
 
 class ScaffoldPlan(BaseModel):
+    analysis: str = Field(
+        description="Analyze ALL participants in the diagram before creating components."
+    )
     components: list[Component] = Field(
         description="List of internal system components to scaffold"
     )
@@ -94,34 +97,24 @@ def write_scaffold_to_disk(plan: ScaffoldPlan, src_dir: Path) -> None:
 
 
 SYSTEM_PROMPT = """
-You are the Scaffolder Agent in a software development pipeline. Your task is to identify the **Internal System Components** that need to be implemented based on a Use Case and a Sequence Diagram.
+You are the Interface Scaffolder Agent in a Python development pipeline. 
+Your task is to analyze a Use Case and a Mermaid Sequence Diagram to identify the internal system components that need to be built.
 
----
-
-## INPUTS
-1. **Use Case**: Defines Primary Actors and Secondary Actors (External Dependencies/Mocks).
-2. **Sequence Diagram**: A Mermaid sequence diagram shows interactions between Actors and Participants.
-
----
-
-## RULES
-1. **Identify Internal Components**: Look at the `participants` in the Sequence Diagram.
-2. **Exclude External Actors**: Do NOT scaffold Primary Actors that aren't part of the system (e.g., Customer, User) or Secondary Actors explicitly labeled as "Mock", "External", or "Dependency" in the Use Case.
-3. **Focus on the "System"**: If a participant represents the system being built or its internal modules, it must be scaffolded.
-4. **Naming Conventions**:
-   - `class_name`: PascalCase (e.g., VendingMachine).
-   - `file_name`: snake_case (e.g., vending_machine).
-
----
-
-## OUTPUT
-Return a structured list of components, each with a `class_name` and `file_name`.
+<rules>
+1. **Analyze Every Participant**: Look at all `participants` in the Sequence Diagram.
+2. **Filter Externals**: Do NOT scaffold Primary Actors (e.g., User, Admin) or External Dependencies (e.g., StripeAPI, ExternalDatabase) defined in the Use Case.
+3. **Identify Internals**: Scaffold only the core components of the system being built.
+4. **Naming Conventions**: Classes must be PascalCase. Files must be snake_case.
+5. **Chain of Thought**: You MUST analyze each participant first in the `analysis` array before generating the final `components` list.
+</rules>
 """
 
 HUMAN_PROMPT = """
-**Use Case**:
+<use_case>
 {use_case}
+</use_case>
 
-**Sequence Diagram**:
+<sequence_diagram>
 {sequence_diagram}
+</sequence_diagram>
 """
