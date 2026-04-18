@@ -75,6 +75,7 @@ class LoggingMiddleware(AgentMiddleware):
         try:
             result = handler(request)
             logger.info(f"[Tool] {tool_name} completed successfully.")
+            logger.debug(f"[Tool] Call Completed, result: {result}")
             return result
         except Exception as e:
             logger.error(f"[Tool] {tool_name} failed: {e}")
@@ -130,6 +131,7 @@ class LoggingMiddleware(AgentMiddleware):
         try:
             result = await handler(request)
             logger.info(f"[Tool] {tool_name} completed successfully (async).")
+            logger.debug(f"[Tool] Call Completed (async), result: {result}")
             return result
         except Exception as e:
             logger.error(f"[Tool] {tool_name} failed (async): {e}")
