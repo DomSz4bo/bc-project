@@ -27,6 +27,7 @@ shared_graph = create_graph()
 SHOW_SUBAGENT_OUTPUTS = True
 SHOW_STATE_UPDATES = False
 
+
 class WorkflowApp:
     def __init__(self, graph: CompiledStateGraph):
         self.graph = graph
@@ -57,7 +58,12 @@ class WorkflowApp:
             print(f"Falling back to cwd: {os.getcwd()}")
             working_directory = Path.cwd()
 
-        skills_manager = SkillManager([working_directory])
+        root_dirs = [working_directory]
+        source_directory = Path(__file__).parent
+        if not os.path.samefile(working_directory, source_directory):
+            root_dirs.append(source_directory)
+
+        skills_manager = SkillManager(root_dirs)
         skills_manager.reload_skills()
 
         graph_context: GraphContext = {
@@ -80,12 +86,23 @@ class WorkflowApp:
 
         elif data.type == "end" and self.current_custom_step:
             self.current_custom_step.status = "success"
-            self.current_custom_step.name = data.message
+            if data.extra.get("type", "") == "tool":
+                self.current_custom_step.name = data.extra.get("title", "Unknown Tool")
+                if "output" in data.extra:
+                    self.current_custom_step.output = data.extra.get("output")
+            else:
+                self.current_custom_step.name = data.message
             await self.current_custom_step.update()
             self.current_custom_step = None
 
         elif data.type == "message":
-            step = cl.Step(name=data.message)
+            step = cl.Step()
+            if data.extra.get("type", "") == "tool":
+                step.name = data.extra.get("title", "Unknown Tool")
+                if "output" in data.extra:
+                    step.output = data.extra.get("output")
+            else:
+                step.name = data.message
             step.status = "success"
             await step.send()
 
@@ -139,6 +156,9 @@ class WorkflowApp:
             self.current_custom_step = None
 
         for node_name, updates in chunk["data"].items():
+            if not updates:
+                continue
+
             if SHOW_STATE_UPDATES:
                 node_step = cl.Step(name=f"✓ [{node_name}] completed task")
                 node_step.status = "success"
