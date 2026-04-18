@@ -47,6 +47,13 @@ participant A@{"type": "database"}    # cylinder
 participant A@{"type": "collections"} # collections
 participant A@{"type": "queue"}       # queue
 ```
+When using stereotypes and aliases, the stereotype comes before the alias.
+```
+%% CORRECT:
+actor DB@{ "type": "database" } as User Database
+%% INCORRECT:
+actor DB as User Database@{ "type": "database" }
+```
 
 **Grouping:**
 ```
