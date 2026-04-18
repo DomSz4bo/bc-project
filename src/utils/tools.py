@@ -27,6 +27,7 @@ def get_mcp_client():
                     "@modelcontextprotocol/server-filesystem",
                     working_directory_str,
                 ],
+                "cwd": working_directory_str,
             }
         }
     )
