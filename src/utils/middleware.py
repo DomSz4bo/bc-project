@@ -186,7 +186,17 @@ class ToolStreamingMiddleware(AgentMiddleware):
 
         writer = get_stream_writer()
         msg = f"Executed tool call: {tool_name}\nResult:\n{result}"
-        writer(CustomStreamData(msg, "message"))
+        writer(
+            CustomStreamData(
+                msg,
+                "message",
+                {
+                    "type": "tool",
+                    "title": f"Executed tool call: {tool_name}",
+                    "output": str(result),
+                },
+            )
+        )
 
         return result
 
@@ -208,7 +218,17 @@ class ToolStreamingMiddleware(AgentMiddleware):
         result = await handler(request)
 
         msg = f"Executed tool call: {tool_name}\nResult:\n{result}"
-        writer(CustomStreamData(msg, "end"))
+        writer(
+            CustomStreamData(
+                msg,
+                "end",
+                {
+                    "type": "tool",
+                    "title": f"Executed tool call: {tool_name}",
+                    "output": str(result),
+                },
+            )
+        )
 
         return result
 
