@@ -55,10 +55,11 @@ DEFAULT_REVISION_LIMIT = 3
 logging_mw = LoggingMiddleware()
 streaming_mw = ToolStreamingMiddleware()
 llm_with_tools = build_fallback_chain(
-    gemini_3_flash.bind_tools(all_tools),
-    gemini_2p5_flash.bind_tools(all_tools),
-    gemini_3p1_flash_lite.bind_tools(all_tools),
-    gemma_4_31b.bind_tools(all_tools),
+    gemini_3_flash,
+    gemini_2p5_flash,
+    gemini_3p1_flash_lite,
+    gemma_4_31b,
+    tools=all_tools,
 )
 
 

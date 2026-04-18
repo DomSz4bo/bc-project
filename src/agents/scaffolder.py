@@ -33,8 +33,7 @@ class ScaffoldPlan(BaseModel):
 
 
 structured_llm = build_fallback_chain(
-    gemini_3p1_flash_lite.with_structured_output(ScaffoldPlan),
-    gemma_4_31b.with_structured_output(ScaffoldPlan),
+    gemini_3p1_flash_lite, gemma_4_31b, schema=ScaffoldPlan
 )
 
 

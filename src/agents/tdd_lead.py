@@ -33,9 +33,10 @@ class TDDPlan(BaseModel):
 
 
 llm_with_structure = build_fallback_chain(
-    gemini_3_flash.with_structured_output(TDDPlan),
-    gemini_3p1_flash_lite.with_structured_output(TDDPlan),
-    gemma_4_31b.with_structured_output(TDDPlan),
+    gemini_3_flash,
+    gemini_3p1_flash_lite,
+    gemma_4_31b,
+    schema=TDDPlan,
 )
 
 
