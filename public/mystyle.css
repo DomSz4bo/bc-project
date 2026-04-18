@@ -27,3 +27,12 @@ code {
 .logo.w-\[200px\] {
     width: 120px;
 }
+
+.text-card-foreground .bg-accent {
+    background-color: #23241f;
+    padding: 1em;
+}
+
+.text-card-foreground .bg-accent code {
+    color: #f8f8f2;
+}
