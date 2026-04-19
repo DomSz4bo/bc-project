@@ -64,6 +64,7 @@ async def architect(
 
     if is_valid:
         logger.info("Architect completed Sequence Diagram generation.")
+        logger.debug(f"Architect diagram: {diagram}.")
         writer(CustomStreamData("Sequence diagram successfully created.", "end"))
         return Command(
             goto=Nodes.CRITIC,

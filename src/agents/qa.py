@@ -108,6 +108,7 @@ async def quality_assurance(
     response = await llm_with_tools.ainvoke(messages)
 
     logger.info("QA agent has replied.")
+    logger.debug(f"QA response: {response.pretty_repr()}")
 
     update = {"qa_messages": messages + [response]}
 

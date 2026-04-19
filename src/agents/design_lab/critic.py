@@ -72,11 +72,16 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     ]
     response: CriticOutput = await llm_with_structure.ainvoke(messages)
 
+    logger.info(f"Critic finished evalauting artifacts. Verdict: {response.verdict}")
+    logger.debug(f"Critic response: {response}")
+
     if response.verdict == "PASS":
         msg = "Design artifacts passed consistency check."
-        writer(CustomStreamData(msg, "end"))
+    else:
+        msg = "Design artifacts failed consistency check."
+    writer(CustomStreamData(msg, "end"))
 
-    logger.info(f"Critic finished evalauting artifacts. Verdict: {response.verdict}")
+
 
     return {
         "critic_verdict": response.verdict,
