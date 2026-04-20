@@ -8,7 +8,7 @@ from langgraph.runtime import Runtime
 from loguru import logger
 
 from src.graph.state import AgentState, GraphContext
-from src.utils.llm import gemini_3_flash, gemini_3p1_flash_lite, gemma_4_31b
+from src.utils.llm import gemini_3p1_flash_lite, gemma_4_31b
 from src.utils.middleware import (
     LoggingMiddleware,
     ModelCallStreamingMiddleware,
@@ -61,7 +61,7 @@ async def engineer(
         all_tools = file_tools + [run_tests]
 
         engineer_agent = create_agent(
-            gemini_3_flash,
+            gemini_3p1_flash_lite,
             all_tools,
             system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,

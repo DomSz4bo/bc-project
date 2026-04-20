@@ -13,8 +13,6 @@ from src.graph.node_names import Nodes
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import (
     build_fallback_chain,
-    gemini_2p5_flash,
-    gemini_3_flash,
     gemini_3p1_flash_lite,
     gemma_4_31b,
 )
@@ -55,8 +53,6 @@ DEFAULT_REVISION_LIMIT = 3
 logging_mw = LoggingMiddleware()
 streaming_mw = ToolStreamingMiddleware()
 llm_with_tools = build_fallback_chain(
-    gemini_3_flash,
-    gemini_2p5_flash,
     gemini_3p1_flash_lite,
     gemma_4_31b,
     tools=all_tools,

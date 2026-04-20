@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 from src.graph.state import AgentState, GraphContext
 from src.utils.llm import (
     build_fallback_chain,
-    gemini_2p5_flash,
     gemini_3p1_flash_lite,
     gemma_4_31b,
 )
@@ -29,7 +28,7 @@ class CriticOutput(BaseModel):
 
 
 llm_with_structure = build_fallback_chain(
-    gemini_2p5_flash, gemini_3p1_flash_lite, gemma_4_31b, schema=CriticOutput
+    gemini_3p1_flash_lite, gemma_4_31b, schema=CriticOutput
 )
 
 
