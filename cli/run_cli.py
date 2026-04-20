@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.globals import set_verbose
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import (
     CustomStreamPart,
@@ -41,6 +41,7 @@ from src.utils.skills import SkillManager
 from src.utils.streaming import CustomStreamData
 
 set_verbose(False)
+SHOW_STATE_UPDATES = True
 
 logger.remove()
 logger.add(".app_cli/logs/logs_{time:YYYY-MM-DD_HH-mm-ss}.log")
@@ -225,7 +226,7 @@ class InteractiveCLI:
             self.status.stop()
             self.status = None
 
-        self.console.print("=" * 50 + "\n")
+        self.console.print("\n" + "=" * 50 + "\n")
 
     def _process_custom_stream(self, chunk: CustomStreamPart) -> None:
         data: CustomStreamData = chunk["data"]
@@ -268,8 +269,6 @@ class InteractiveCLI:
             self.status.stop()
             self.full_response += msg_chunk.text
             self.console.print(msg_chunk.text, end="")
-            with open("stream_log.txt", "a") as stream_log:
-                print(repr(msg_chunk.text), file=stream_log)
 
     def _print_node_name(self, node_name: str):
         self.console.print(Panel(f"{node_name}:"), style="bold blue3")
@@ -281,23 +280,25 @@ class InteractiveCLI:
 
     def _process_node_update(self, node_name: str, updates: dict[str, Any]):
         """Processes and prints updates from a single workflow node."""
-        self.console.print("\n\n" + "-" * 15 + " update " + "-" * 15)
-        self.console.print(f"✓ [{node_name}] completed task.")
+        if SHOW_STATE_UPDATES:
+            self.console.print("\n\n" + "-" * 15 + " update " + "-" * 15)
+            self.console.print(f"✓ [{node_name}] completed task.")
         if not updates:
             return
 
-        if "supervisor_phase" in updates:
-            self.console.print(f"  ➜ phase: {updates['supervisor_phase']}")
-        if "user_intent_summary" in updates:
-            self.console.print(f"  ➜ intent: {updates['user_intent_summary']}")
-        if "design_notes" in updates:
-            self.console.print(f"  ➜ notes: {updates['design_notes']}")
-        if "critic_verdict" in updates:
-            self.console.print(f"  ➜ critic: {updates['critic_verdict']}")
-        if "critic_feedback" in updates:
-            self.console.print(f"  ➜ criti_feedback: {updates['critic_feedback']}")
-        if "qa_feedback" in updates:
-            self.console.print(f"  ➜ qa_feedback: {updates['qa_feedback']}")
+        if SHOW_STATE_UPDATES:
+            if "supervisor_phase" in updates:
+                self.console.print(f"  ➜ phase: {updates['supervisor_phase']}")
+            if "user_intent_summary" in updates:
+                self.console.print(f"  ➜ intent: {updates['user_intent_summary']}")
+            if "design_notes" in updates:
+                self.console.print(f"  ➜ notes: {updates['design_notes']}")
+            if "critic_verdict" in updates:
+                self.console.print(f"  ➜ critic: {updates['critic_verdict']}")
+            if "critic_feedback" in updates:
+                self.console.print(f"  ➜ criti_feedback: {updates['critic_feedback']}")
+            if "qa_feedback" in updates:
+                self.console.print(f"  ➜ qa_feedback: {updates['qa_feedback']}")
 
         if "use_case" in updates or "sequence_diagram" in updates:
             if "use_case" in updates:
@@ -308,16 +309,6 @@ class InteractiveCLI:
             self.console.print(
                 f"  ➜ Updated {self.get_relative_path(self.output_file)}"
             )
-
-        if "messages" in updates and updates["messages"]:
-            last_msg = updates["messages"][-1]
-            if isinstance(last_msg, ToolMessage):
-                self.console.print(f"  ➜ ToolMessage ({last_msg.name}): {last_msg}\n")
-
-        if "qa_messages" in updates and updates["qa_messages"]:
-            last_msg = updates["qa_messages"][-1]
-            if isinstance(last_msg, ToolMessage):
-                self.console.print(f"  ➜ QAToolMessage ({last_msg.name}): {last_msg}\n")
 
     async def run(self):
         """Primary execution loop for the CLI."""
