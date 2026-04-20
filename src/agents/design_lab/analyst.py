@@ -90,6 +90,8 @@ mandatory and must be populated:
 # USE CASE: [Name]
 **Primary Actor:** [Actor Name]
 
+**System:** [System Name]
+
 **Secondary Actors:** [External Systems/DBs]
 
 ## 1. Context & Boundaries

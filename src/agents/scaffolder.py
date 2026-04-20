@@ -98,7 +98,7 @@ def write_scaffold_to_disk(plan: ScaffoldPlan, src_dir: Path) -> None:
 
 SYSTEM_PROMPT = """
 You are the Interface Scaffolder Agent in a Python development pipeline. 
-Your task is to analyze a Use Case and a Mermaid Sequence Diagram to identify the internal system components that need to be built.
+Your task is to analyze a Use Case and a Mermaid Sequence Diagram to identify the system and its components that need to be built.
 
 <rules>
 1. **Analyze Every Participant**: Look at all `participants` in the Sequence Diagram.
