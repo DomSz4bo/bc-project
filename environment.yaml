@@ -6,10 +6,4 @@ dependencies:
   - python=3.12
   - pip
   - pip:
-    - chainlit
-    - langgraph
-    - langchain
-    - langchain-google-genai
-    - langchain-mcp-adapters
-
-# specify versions later (conda export)
+    - -e .
