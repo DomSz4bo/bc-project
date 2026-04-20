@@ -1,17 +1,11 @@
-# Agent specific files
-.geminiignore
-.gemini/
-
 # Chainlit
 .chainlit/translations/
 
 # VS Code
-.vscode/*
+.vscode/
 
 # Personal project notes
 notes/*
-*.png
-/*.mmd
 
 .app_cli/
 
@@ -108,3 +102,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Agent specific files
+.geminiignore
+.gemini/
+AGENTS.md
+
