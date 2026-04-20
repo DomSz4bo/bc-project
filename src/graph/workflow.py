@@ -3,6 +3,7 @@ from typing import Literal
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import RetryPolicy
 
 from src.agents import (
     analyst,
@@ -74,7 +75,12 @@ def create_graph() -> CompiledStateGraph:
     builder.add_node(Nodes.SCAFFOLDER, scaffolder)
     builder.add_node(Nodes.TDD, tdd_lead)
     builder.add_node(Nodes.ENGINEER, engineer)
-    builder.add_node(Nodes.QA, quality_assurance)
+    builder.add_node(Nodes.QA, quality_assurance, retry_policy=RetryPolicy(
+        max_attempts=3, 
+        initial_interval=7,
+        backoff_factor=10,
+        max_interval=70
+    ))
     builder.add_node(Nodes.TOOLS, supervisor_tool_node)
     builder.add_node(Nodes.QA_TOOLS, qa_tool_node)
     builder.add_node(Nodes.PREPARE_DESIGN, prepare_design_node)

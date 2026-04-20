@@ -1,5 +1,5 @@
 from langchain.agents import create_agent
-from langchain.agents.middleware import ModelFallbackMiddleware
+from langchain.agents.middleware import ModelFallbackMiddleware, ModelRetryMiddleware
 from langchain.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -66,7 +66,10 @@ async def engineer(
             system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,
             middleware=[
-                ModelFallbackMiddleware(gemini_3p1_flash_lite, gemma_4_31b),
+                ModelFallbackMiddleware(gemma_4_31b),
+                ModelRetryMiddleware(
+                    on_failure="error", initial_delay=3, backoff_factor=22, max_delay=70
+                ),
                 ModelCallStreamingMiddleware("Working on the implementation...", ""),
                 ToolStreamingMiddleware(),
                 ToolErrorMiddleware(),
