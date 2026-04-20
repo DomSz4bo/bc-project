@@ -64,9 +64,10 @@ def build_fallback_chain(
                 prev_model = fallbacks[model_idx - 1] if model_idx != 0 else primary
 
                 prev_name = getattr(prev_model, "model", str(prev_model))
+                now_name = getattr(model_to_use, "model", str(model_to_use))
 
                 logger.warning(
-                    f"⚠️ Fallback triggered! Model attempt {model_idx} ({prev_name}) failed."
+                    f"⚠️ Fallback triggered! Model attempt {model_idx} ({prev_name}) failed. Moving to {now_name}."
                 )
                 logger.debug(f"Error ({type(error).__name__}) w/ message: {str(error)}")
 
