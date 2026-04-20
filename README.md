@@ -1,10 +1,14 @@
 
 # README
 
-**System Overview:** This project is a research prototype for a "Visual-First" development pipeline that transforms ambiguous human intent into verified, test-driven code. The prototype centers on a **Multi-Agent** workflow. 
+**System Overview**
 
-It starts by iteratively refining the intent and turning it into a textual **Use Case** and **Mermaid Sequence Diagram**. 
-After the design is approved it moves to a **TDD** inspired test generation phase subsequently to a **Code Implementation** phase. Both are strictly grounded in the verified system design.
+This project is a research prototype for a **visual-first** development pipeline, designed to bridge the gap between ambiguous human intent and code. The system uses a **multi-agent** architecture, using LangGraph, to attempt to orchestrate a transition from an abstract idea to a concrete implementation.
+The workflow is divided into two primary phases.
+
+**The Design Lab:** A specialized team of agents works iteratively to refine a user goal into structured a **Cockburn Use Case** and synchronized **Mermaid Sequence Diagram**. This visual-first approach seeks to present the system's design using abstractions, enabling easier human validation before implementation begins.
+
+**Implementation & Verification:** Once the design is approved, it serves as the "ground truth" for the implementation team. The system follows **TDD**-inspired aproach, by automatically generating class scaffolds and test suites before writing the application logic.
 
 ---
 
@@ -28,7 +32,7 @@ bc-app
 ---
 
 ## 🔑 API Configuration
-The project currently utilizes **Google Gemini** as the primary LLM provider.
+The project currently utilizes **Google Gemini** as the sole LLM provider.
 1. Create a `.env` file in the root directory.
 2. Add your API key: `GOOGLE_API_KEY=your_gemini_api_key_here`
 
