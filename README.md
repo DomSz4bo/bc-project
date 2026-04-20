@@ -1,16 +1,28 @@
 
-
 # README
 
-**System Overview:** This project is a research prototype for a "Visual-First" development pipeline that transforms ambiguous human intent into verified, test-driven code. The prototype centers on a **Multi-Agent Design Lab** where requirements are iteratively refined into a "Dual-Truth" contract: a textual **Cockburn Use Case** (Intent) and a visual **Mermaid Sequence Diagram** (Logic). By enforcing this rigorous design stage, the system ensures that subsequent **Test Generation (TDD)** and **Code Implementation** are strictly grounded in validated architectural logic rather than direct, unverified LLM generation.
+**System Overview:** This project is a research prototype for a "Visual-First" development pipeline that transforms ambiguous human intent into verified, test-driven code. The prototype centers on a **Multi-Agent** workflow. 
+
+It starts by iteratively refining the intent and turning it into a textual **Use Case** and **Mermaid Sequence Diagram**. 
+After the design is approved it moves to a **TDD** inspired test generation phase subsequently to a **Code Implementation** phase. Both are strictly grounded in the verified system design.
 
 ---
 
 ## 🚀 Quickstart
+
+### Option A: Using Conda (Recommended)
 ```bash
 conda env create -f environment.yaml
 conda activate bc-project
-chainlit run app.py
+bc-app
+```
+
+### Option B: Using standard Python (venv/uv)
+```bash
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -e .
+bc-app
 ```
 
 ---
@@ -19,7 +31,6 @@ chainlit run app.py
 The project currently utilizes **Google Gemini** as the primary LLM provider.
 1. Create a `.env` file in the root directory.
 2. Add your API key: `GOOGLE_API_KEY=your_gemini_api_key_here`
-3. Ensure the environment variable is loaded before running the application.
 
 ---
 
@@ -27,10 +38,10 @@ The project currently utilizes **Google Gemini** as the primary LLM provider.
 
 ### Core Frameworks
 * **Language:** Python 3.12+
-* **UI/Frontend:** [Chainlit](https://docs.chainlit.io/) (Browser-based Chat Interface).
 * **Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/) (Stateful Multi-Agent Workflows).
 * **LLM Framework:** [LangChain](https://python.langchain.com/).
 * **Diagram Visualization:** [Mermaid.js](https://mermaid.js.org/intro/).
+* **Browser-based Chat Interface:** [Chainlit](https://docs.chainlit.io/).
 
 ### Environment Management
 * **Manager:** Conda.
@@ -39,40 +50,61 @@ The project currently utilizes **Google Gemini** as the primary LLM provider.
 
 ---
 
-## 🔄 The AI Development Pipeline
+## 🔄 The AI Workflow
 
 1. **Intake:** User discusses the goal with the Supervisor.
 2. **Design Lab:**
-    * **Analyst:** Drafts the "Fully Dressed" Use Case.
-    * **Architect:** Maps the Use Case to a Mermaid Sequence Diagram.
-    * **Critic:** Compares both for "Traceability" and logic errors.
-    * *Loop:* If the Critic finds flaws, it sends the sequence diagram back for revision.
+    * **`Analyst`:** Creates the Use Case.
+    * **`Architect`:** Maps the Use Case to a Mermaid Sequence Diagram.
+    * **`Critic`:** Compares the two design artifacts and searches for errors.
+    * *Loop:* If the Critic finds flaws, it sends the **sequence diagram** back for revision.
 3. **Approval:** User reviews the synchronized Use Case and Diagram.
-4. **Implementaiton:**
-   * **Test Generation:** `QA Agent` writes tests based on the Use Case Extensions.
-   * **Implementation:** `Engineer Agent` writes code to satisfy the tests and diagram.
+4. **Implementation:**
+   * **Ground truth:** `Scaffolder` creates class stubs (.py files) based on the design artifacts.
+   * **Test Generation:** `TDD Lead` writes initial tests based on the Use Case Extensions and Sequence diagram.
+   * **Implementation:** `Engineer Agent` writes code to satisfy the tests and design.
+   * **Validation:** `QA agent` checks test coverage and proposes new tests accordingly. Can send the implementation back to the `Engineer` for fixing.
+
+---
+
+## Workflow scheme
+![Workflow diagram](https://www.st.fmph.uniba.sk/~szabo175/assets/workflow_scheme.jpeg)
+
 
 ---
 
 ## 📂 Project Structure
 ```text
 bc-project/
-├── .chainlit/                  # Chainlit configuration and translations
-├── public/                     # Static assets for Chainlit
+├── .agents/skills/                 # app-global supervisor (post-impl.) skills
+├── .chainlit/                      # Chainlit configuration and translations
+├── public/                         # Static assets for Chainlit
+├── cli/
+│   ├── commands.py                 # CLI command handlers
+│   ├── run_cli.py                  # CLI
+│   ├── run_app.py                  # APP entry point
+│   └── utils.py                    # CLI utility functions
 ├── src/
-│   ├── agents/                 # Node definitions for each agent
-│   │   ├── supervisor.py       # Central orchestrator
-│   │   ├── design_lab/         # Design Lab
-│   │   │   ├── analyst.py      # Requirements analyst and Use Case Specialist
-│   │   │   ├── architect.py    # Technical modeler
-│   │   │   └── critic.py       # QA for design phase
-│   │   ├── qa.py               # Test suite creator
-│   │   └── engineer.py         # Code generator
-│   └── graph/                  # LangGraph definitions
-│       ├── state.py            # Graph state schema
-│       └── workflow.py         # Graph construction and compilation
-├── app.py                      # Chainlit UI and message handlers
-├── chainlit.md                 # UI welcome screen content
-├── environment.yaml            # Conda environment
-└── AGENTS.md                   # Project reference
+│   ├── agents/                     # Node definitions for each agent
+│   │   ├── supervisor.py           # Central orchestrator
+│   │   ├── design_lab/             # Design Lab
+│   │   │   ├── analyst.py          # Requirements analyst and Use Case Specialist
+│   │   │   ├── architect.py        # Technical modeler
+│   │   │   └── critic.py           # QA for design phase
+│   │   ├── scaffolder.py           # Project scaffolding agent
+│   │   ├── tdd_lead.py             # TDD test suite creator
+│   │   └── engineer.py             # Code generator
+│   │   ├── qa.py                   # Test coverage enforcer
+│   ├── graph/                      
+│   │   ├── util_nodes/             # state transition handler nodes
+│   │   │   ├── design.py
+│   │   │   └── implementation.py
+│   │   ├── node_names.py           # Node name enum definition
+│   │   ├── state.py                # Graph state and context schema
+│   │   └── workflow.py             # Graph construction and compilation
+│   └── utils/                      # utility modules used in nodes
+│       ├──
+├── tests/                          # test suite
+├── app.py                          # Chainlit UI
+└── chainlit.md                     # UI welcome screen content
 ```
