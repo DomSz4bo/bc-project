@@ -64,7 +64,6 @@ async def architect(
 
     if is_valid:
         logger.info("Architect completed Sequence Diagram generation.")
-        logger.debug(f"Architect diagram: {diagram}.")
         writer(CustomStreamData("Sequence diagram successfully created.", "end"))
         return Command(
             goto=Nodes.CRITIC,
@@ -144,6 +143,7 @@ async def _run_validation_cycle(
         )
 
         mmd_code = extract_mermaid_code(response.sequence_diagram)
+        logger.debug(f"Architect - created SqD:\n{mmd_code}")
 
         writer(CustomStreamData("Checking diagram syntax validity", "start"))
         validation_result = await validate_mermaid(mmd_code)
@@ -151,6 +151,7 @@ async def _run_validation_cycle(
             break
 
         logger.info(f"Architect - invalid syntax for check n.{generation_n + 1}")
+        logger.debug(f"Architect - syntax error:\n{validation_result.error_message}")
 
         ai_message_content = (
             f"Reasoning:\n{response.reasoning}\n\nDiagram:\n```mermaid\n{mmd_code}\n```"
