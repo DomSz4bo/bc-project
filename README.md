@@ -12,6 +12,13 @@ The workflow is divided into two primary phases.
 
 ---
 
+## 📋 Prerequisites
+* **Python 3.12+**
+* **Node.js & npx:** Required for the Filesystem MCP and Mermaid validation.
+* **API Key:** See [API Configuration](#-api-configuration).
+
+---
+
 ## 🚀 Quickstart
 
 ### Option A: Using Conda (Recommended)
@@ -42,6 +49,7 @@ The project currently utilizes **Google Gemini** as the sole LLM provider.
 
 ### Core Frameworks
 * **Language:** Python 3.12+
+* **Runtime:** Node.js (via `npx`) for MCP tools.
 * **Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/) (Stateful Multi-Agent Workflows).
 * **LLM Framework:** [LangChain](https://python.langchain.com/).
 * **Diagram Visualization:** [Mermaid.js](https://mermaid.js.org/intro/).
