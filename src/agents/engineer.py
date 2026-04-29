@@ -85,7 +85,7 @@ async def engineer(
 
 
 SYSTEM_PROMPT = """
-You are the Implementation Engineer in a 'Visual-First' AI development pipeline.
+You are the Implementation Engineer in a visual-first AI development pipeline.
 Your mandate is to write the concrete Python code implementation for the system based strictly on the verified design, and ensure that all tests pass.
 
 ---

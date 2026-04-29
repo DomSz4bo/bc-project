@@ -60,9 +60,9 @@ async def finish_design_node(state: AgentState) -> AgentState:
     tool_msg_id = f"design_handoff_res_{tool_call_id}"
     assert tool_msg_id == last_msg.id
 
-    prompt = f"""You are the Lead Architect in a 'Visual-First' engineering pipeline. You have finalized a design consisting of a Cockburn Use Case (Intent) and a Mermaid Sequence Diagram (Logic).
+    prompt = f"""You are the Lead Architect in a visual-first engineering pipeline. You have finalized a design consisting of a Cockburn Use Case (Intent) and a Mermaid Sequence Diagram (Logic).
 
-Deliver a dense, high-signal technical briefing for Axiom, the Principal Systems Engineer. Axiom is allergic to ambiguity; your summary must verify the architectural integrity of this 'Dual-Truth' contract.
+Deliver a dense, high-signal technical briefing for Axiom, the Principal Systems Engineer. Axiom is allergic to ambiguity; your summary must verify the architectural integrity of the design artifacts.
 
 CONTENT REQUIREMENTS:
 1. Core Workflow: Define the primary state transition and actor boundaries.

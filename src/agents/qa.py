@@ -30,7 +30,7 @@ REJECT_IMPLEMENTATION = "reject_implementation"
 
 class ImplementationFeedback(BaseModel):
     feedback: str = Field(
-        description=("Detailed feedback about what tests are failingaand other issues ")
+        description=("Detailed feedback about what tests are failing and/or any other issues ")
     )
 
 
@@ -190,7 +190,7 @@ If you find failing tests or clear logical deviations that require implementatio
 ---
 
 ## WHEN TO FINISH
-If all tests pass, coverage is high (e.g., >85%), and the implementation is faithful to the design, simply finish your turn with a brief summary. **Do NOT call `reject_implementation` if everything is correct.**
+If all tests pass, coverage is high about >85%, and the implementation is faithful to the design, simply finish your turn with a brief summary. **Do NOT call `reject_implementation` if everything is correct.**
 """
 
 USER_PROMPT = """

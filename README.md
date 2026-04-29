@@ -6,7 +6,7 @@
 This project is a research prototype for a **visual-first** development pipeline, designed to bridge the gap between ambiguous human intent and code. The system uses a **multi-agent** architecture, using LangGraph, to attempt to orchestrate a transition from an abstract idea to a concrete implementation.
 The workflow is divided into two primary phases.
 
-**The Design Lab:** A specialized team of agents works iteratively to refine a user goal into structured a **Cockburn Use Case** and synchronized **Mermaid Sequence Diagram**. This visual-first approach seeks to present the system's design using abstractions, enabling easier human validation before implementation begins.
+**The Design Lab:** A specialized team of agents works iteratively to refine a user goal into structured a **Cockburn Use Case** and synchronized **Mermaid Sequence Diagram**. This approach seeks to present the system's design using abstractions, inspired by the MDD methodology, enabling easier human validation before implementation begins.
 
 **Implementation & Verification:** Once the design is approved, it serves as the "ground truth" for the implementation team. The system follows **TDD**-inspired aproach, by automatically generating class scaffolds and test suites before writing the application logic.
 

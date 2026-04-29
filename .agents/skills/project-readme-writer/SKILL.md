@@ -1,11 +1,11 @@
 ---
 name: project-readme-writer
-description: Write or update a comprehensive README.md for a finished project that was built using the Multi-Agent Design Lab workflow. It ensures the design artifacts (Cockburn Use Case and Mermaid Sequence Diagram) are incorporated into the README.
+description: Write or update a comprehensive README.md for a finished project that was built using the model-driven multi-agent workflow. It ensures the design artifacts (Cockburn Use Case and Mermaid Sequence Diagram) are incorporated into the README.
 ---
 
 # Project README Writer
 
-This skill guides the creation of a `README.md` file for projects developed using our visual-first, multi-agent workflow. Projects generated this way always have design artifacts that serve as the "Dual-Truth" contract.
+This skill guides the creation of a `README.md` file for projects developed using our multi-agent workflow. Projects generated this way always have design artifacts that serve as the basis for code generation.
 
 ## Process
 
@@ -28,6 +28,6 @@ This skill guides the creation of a `README.md` file for projects developed usin
 4. **Formatting Guidelines**:
    - Use clear headings.
    - Embed Mermaid diagrams correctly using standard markdown code blocks tagged with `mermaid`.
-   - Ensure the tone is professional and accurately reflects the "Dual-Truth" contract of the project.
+   - Ensure the tone is professional and accurately reflects the design artifacts of the project.
 
 5. **Review and Save**: After drafting, write the content to `README.md` in the root of the target project directory.
