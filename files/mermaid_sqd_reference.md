@@ -222,7 +222,7 @@ link A: Repo @ https://github.com/org/repo
 
 ## Comments
 ```
-%% This is a comment — ignored by parser
+%% This is a comment which is ignored by the parser
 ```
 
 ---
@@ -246,7 +246,7 @@ participant A as "Line one<br/>Line two"
 
 ## Key Rules & Common Mistakes
 - All blocks (`loop`, `alt`, `par`, `critical`, `break`, `rect`, `box`) must close with `end`
-- `else` and `and` and `option` are keywords inside blocks — do not use as actor names
+- `else` and `and` and `option` are keywords inside blocks, do not use as actor names
 - Participant order in diagram = order of first appearance (or explicit declaration order)
 - `create` must come before the first message to/from that participant
 - Nested `par` and `critical` blocks are supported

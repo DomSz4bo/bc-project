@@ -31,7 +31,11 @@ from src.utils.streaming import CustomStreamData
 
 class ArchitectOutput(BaseModel):
     reasoning: str = Field(
-        description="Step-by-step analysis and plan for the sequence diagram, including identifying participants, mapping out the main flow, and handling extensions or diagnosing parser errors if applicable."
+        description=(
+            "Step-by-step analysis and plan for the sequence diagram, "
+            "including identifying participants, mapping out the main flow, "
+            "and handling extensions or diagnosing parser errors if applicable."
+        )
     )
     sequence_diagram: str = Field(
         description="The raw Mermaid.js sequence diagram code."
@@ -232,7 +236,7 @@ Provide the final sequence diagram in the `sequence_diagram` field.
 ### Feature Usage
 - All Mermaid Sequence Diagram features are available (`alt`, `opt`, `loop`, `par`, `note`, etc.).
 - Use whichever features most faithfully represent the Use Case logic.
-- Do not use features decoratively — every construct must be justified by the Use Case.
+- Do not use features decoratively, every construct must be justified by the Use Case.
 - Use activation bars to show that objects are active using `activate` and `deactivate`. You can also use the shortcut notation by appending `+` or `-` suffix to a message arrow.
 - Never leave a control flow block empty. It must contain another block, statement or at least a note.
 

@@ -17,13 +17,23 @@ from src.utils.streaming import CustomStreamData
 
 class CriticOutput(BaseModel):
     analysis: str = Field(
-        description="Step-by-step analysis of the sequence diagram against the Use Case. Go through the Audit Checklist sequentially."
+        description=(
+            "Step-by-step analysis of the sequence diagram against the Use Case. "
+            "Go through the Audit Checklist sequentially."
+        )
     )
     verdict: Literal["PASS", "FAIL"] = Field(
-        description="The final verdict. FAIL if the diagram misses requirements or has logical errors. PASS if it is a complete, faithful representation."
+        description=(
+            "The final verdict. FAIL if the diagram misses requirements or has "
+            "logical errors. PASS if it is a complete, faithful representation."
+        )
     )
     feedback: str = Field(
-        description="If FAIL, provide a numbered list of concrete, surgical instructions for the Architect to fix the diagram. If PASS, provide a brief approval summary.",
+        description=(
+            "If FAIL, provide a numbered list of concrete, "
+            "surgical instructions for the Architect to fix the diagram. "
+            "If PASS, provide a brief approval summary."
+        ),
     )
 
 
@@ -79,8 +89,6 @@ async def critic(state: AgentState, runtime: Runtime[GraphContext]) -> AgentStat
     else:
         msg = "Design artifacts failed consistency check."
     writer(CustomStreamData(msg, "end"))
-
-
 
     return {
         "critic_verdict": response.verdict,

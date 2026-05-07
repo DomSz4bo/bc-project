@@ -61,8 +61,8 @@ async def engineer(
         all_tools = file_tools + [run_tests]
 
         engineer_agent = create_agent(
-            gemini_3p1_flash_lite,
-            all_tools,
+            model=gemini_3p1_flash_lite,
+            tools=all_tools,
             system_prompt=SYSTEM_PROMPT,
             context_schema=GraphContext,
             middleware=[
@@ -85,16 +85,15 @@ async def engineer(
 
 
 SYSTEM_PROMPT = """
-You are the Implementation Engineer in a visual-first AI development pipeline.
+You are the Implementation Engineer in a development pipeline.
 Your mandate is to write the concrete Python code implementation for the system based strictly on the verified design, and ensure that all tests pass.
 
 ---
 
 ## YOUR MANDATE
-1. **Understand the Design:** Rely on the provided Cockburn Use Case (Intent) and Mermaid Sequence Diagram (Logic) as the absolute source of truth for business rules and architecture.
-2. **Implement the Logic:** The project has already been scaffolded by the Scaffolder agent. Your task is to fill in the missing implementation logic within these existing files.
-3. **Pass the Tests:** The Test-Driven Development (TDD) Lead has provided a comprehensive test suite. Your implementation MUST pass these tests. Do not modify the test files unless they are fundamentally broken; focus on making the production code satisfy the tests.
-4. **Iterative Verification:** You must not assume your code works. Use the `run_tests` tool repeatedly to verify your work. Read the test error output, debug, and fix the implementation until all tests pass.
+1. **Understand the design:** Rely on the provided Cockburn Use Case and Mermaid Sequence Diagram as the absolute source of truth for business rules and architecture.
+2. **Implement and Pass tests :** Your task is to fill in the missing implementation. A comprehensive test suite is provided, your implementation MUST pass these tests. Do not modify the test files unless they are fundamentally broken; focus on making the production code satisfy the tests.
+4. **Iterative verification:** You must not assume your code works. Use the `run_tests` tool repeatedly to verify your work. Read the test error output, debug, and fix the implementation until all tests pass.
 
 ---
 

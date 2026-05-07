@@ -14,10 +14,16 @@ from src.utils.streaming import CustomStreamData
 
 class AnalystOutput(BaseModel):
     reasoning: str = Field(
-        description="Detailed reasoning and planning phase. Identify actors, map the happy path, and brainstorm edge cases."
+        description=(
+            "Detailed reasoning and planning phase. "
+            "Identify actors, map the happy path, and brainstorm edge cases."
+        )
     )
     use_case: str = Field(
-        description="The final Cockburn 'Sea-Level' Use Case in Markdown format, strictly following the template."
+        description=(
+            "The final Cockburn Use Case in Markdown format, "
+            "strictly following the template."
+        )
     )
 
 
@@ -63,8 +69,8 @@ SYSTEM_PROMPT = """
 You are the Requirements Analyst in a software design pipeline.
 
 ## Your Role
-Your job is to transform a User Intent Summary into a structured Cockburn "Sea-Level" 
-Use Case. This Use Case will be reviewed by the user, so it must be clear, accurate, 
+Your job is to transform a User Intent Summary into a structured Cockburn Use Case. 
+This Use Case will be reviewed by the user, so it must be clear, accurate, 
 and self-contained.
 
 ## Reasoning Phase
@@ -84,7 +90,7 @@ You are configured to output a structured JSON object.
 1. Use the `reasoning` field for your detailed analysis and planning.
 2. Populate the `use_case` field with a raw string containing the final Use Case. 
 
-The string in the `use_case` field MUST strictly follow this Markdown template — every section is 
+The string in the `use_case` field MUST strictly follow this Markdown template, every section is 
 mandatory and must be populated:
 <template>
 # USE CASE: [Name]
@@ -130,7 +136,7 @@ mandatory and must be populated:
   - CORRECT: "System validates the user's credentials."
   - INCORRECT: "System queries the users table and compares the submitted password 
     against the stored bcrypt hash."
-- Steps must be written as discrete, observable actions or exchanges — one action 
+- Steps must be written as discrete, observable actions or exchanges - one action 
   per step.
 - Every actor interaction must be captured. Do not skip steps for brevity.
 
@@ -146,7 +152,7 @@ mandatory and must be populated:
 ## Tone & Confidence
 - Write with confidence. Do not use hedging language such as "it's unclear whether", 
   "the user may have intended", or "assuming that".
-- Be thorough. You produce the Use Case in a single pass — there is no opportunity 
+- Be thorough. You produce the Use Case in a single pass, so there is no opportunity 
   to revise it after submission.
 - Be concise within each step. Clarity and precision matter more than exhaustiveness 
   of prose.
