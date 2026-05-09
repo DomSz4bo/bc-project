@@ -8,7 +8,7 @@ The workflow is divided into two primary phases.
 
 **The Design Lab:** A specialized team of agents works iteratively to refine a user goal into structured a **Cockburn Use Case** and synchronized **Mermaid Sequence Diagram**. This approach seeks to present the system's design using abstractions, inspired by the MDD methodology, enabling easier human validation before implementation begins.
 
-**Implementation & Verification:** Once the design is approved, it serves as the "ground truth" for the implementation team. The system follows **TDD**-inspired aproach, by automatically generating class scaffolds and test suites before writing the application logic.
+**Implementation & Verification:** Once the design is approved, it serves as the ground truth for the implementation team. The system follows **TDD**-inspired aproach, by automatically generating class scaffolds and test suites before writing the application logic.
 
 ---
 
@@ -49,11 +49,11 @@ The project currently utilizes **Google Gemini** as the sole LLM provider.
 
 ### Core Frameworks
 * **Language:** Python 3.12+
-* **Runtime:** Node.js (via `npx`) for MCP tools.
-* **Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/) (Stateful Multi-Agent Workflows).
-* **LLM Framework:** [LangChain](https://python.langchain.com/).
-* **Diagram Visualization:** [Mermaid.js](https://mermaid.js.org/intro/).
-* **Browser-based Chat Interface:** [Chainlit](https://docs.chainlit.io/).
+* **Runtime:** Node.js (via `npx`) for MCP tools
+* **Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/)
+* **LLM Framework:** [LangChain](https://python.langchain.com/)
+* **Diagram Visualization:** [Mermaid.js](https://mermaid.js.org/intro/)
+* **Browser-based Chat Interface:** [Chainlit](https://docs.chainlit.io/)
 
 ### Environment Management
 * **Manager:** Conda.
@@ -99,7 +99,7 @@ bc-project/
 ├── src/
 │   ├── agents/                     # Node definitions for each agent
 │   │   ├── supervisor.py           # Central orchestrator
-│   │   ├── design_lab/             # Design Lab
+│   │   ├── design_lab/             
 │   │   │   ├── analyst.py          # Requirements analyst and Use Case Specialist
 │   │   │   ├── architect.py        # Technical modeler
 │   │   │   └── critic.py           # QA for design phase
