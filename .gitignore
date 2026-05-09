@@ -103,8 +103,3 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Agent specific files
-.geminiignore
-.gemini/
-AGENTS.md
-
