@@ -1,0 +1,68 @@
+sequenceDiagram
+    autonumber
+    actor Librarian
+    participant System as Library System
+    participant Database@{type: database} as Library Database
+
+    activate Librarian
+    Librarian->>+System: Enters Customer ID and Book ID
+    deactivate Librarian
+    System->>+Database: Requests Customer record
+
+    break Customer not found (3a)
+        Database-->>-System: Customer not found
+        System-->>+Librarian: Shows error: Customer not found
+        deactivate Librarian
+        deactivate System
+    end
+
+    activate Database
+    activate System
+    Database-->>-System: Customer entry
+    break Customer has Unpaid Fines (3b)
+        System-->>+Librarian: Shows error: Fines must be paid first
+        deactivate System
+        deactivate Librarian
+    end
+
+    break Customer Reached Maximum Holds (3c)
+        activate System
+        System-->>+Librarian: Shows error: Hold limit reached
+        deactivate System
+        deactivate Librarian
+    end
+
+    activate System
+    System->>+Database: Request Book record
+
+    break Book not found (5a)
+        Database-->>-System: Book not found
+        System-->>+Librarian: Shows error: Book not found
+        deactivate System
+    end
+
+    activate Database
+    activate System
+    Database-->>-System: Book entry
+
+    break Book is Available (5b)
+        System-->>+Librarian: Shows message: Book is on the shelf
+        deactivate System
+        deactivate Librarian
+    end
+
+    break Book Not Eligible for Holds (5c)
+        activate System
+        System-->>+Librarian: Shows error: Book cannot be placed on hold
+        deactivate System
+        deactivate Librarian
+    end
+
+    activate System
+    System->>+Database: Adds Customer to Book's hold queue
+    deactivate Database
+    System->>+Database: Increments Customer's active hold count
+    deactivate Database
+    System-->>+Librarian: Shows confirmation: Hold placed successfully
+    deactivate System
+    deactivate Librarian
