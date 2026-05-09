@@ -1,6 +1,5 @@
 ### **Use Case: Purchase Product**
 
-**Level:** Sea-level 
 **Primary Actor:** Customer  
 **Secondary Actors:** 
 * **Inventory**: Manages product stock levels.

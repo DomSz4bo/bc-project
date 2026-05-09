@@ -1,9 +1,9 @@
 sequenceDiagram
-    %% autonumber
+    autonumber
     actor Customer
-    participant System
-    participant Inventory as Inventory Service
-    participant Bank as Coin Handler
+    participant System as Vending Machine System
+    participant Inventory
+    participant Bank
 
     activate Customer
     Customer->>+System: Select Product (Product ID)
@@ -28,30 +28,23 @@ sequenceDiagram
     System->>-Customer: Prompt to Insert Coins
     activate Customer
 
-    loop Payment Collection
+    loop Inserted Amount < Price
+
+        break 2-9a: Customer Cancels
+            Customer->>+System: Press Cancel
+            deactivate Customer
+            System->>+Bank: Return All Inserted Coins
+            deactivate Bank
+            System->>-System: Reset Session State
+        end
+
+        activate Customer
         Customer->>+Bank: Insert Coins
         deactivate Customer
         Bank-->>-System: Total Inserted Amount
         activate System
         deactivate System
 
-        break 2-9a: Customer Cancels
-            activate Customer
-            Customer->>+System: Press Cancel
-            deactivate Customer
-            System->>+Bank: Return All Inserted Coins
-            deactivate Bank
-            System-->>+Customer: (Coins Returned)
-            deactivate Customer
-            System->>+System: Reset Session State
-            deactivate System
-            deactivate System
-        end
-
-        break Inserted Amount >= Price
-            Note over System: Continue to Change Validation
-        end
-            
         activate System
         System-->>+Customer: Display "Remaining Balance Required"
         deactivate Customer
@@ -80,7 +73,5 @@ sequenceDiagram
         deactivate Bank
         System-->>+Customer: Product & Change Delivered
         deactivate Customer
-        System->>+System: Record Transaction & Reset Balance
-        deactivate System
-        deactivate System
+        System->>-System: Record Transaction & Reset Balance
 end
