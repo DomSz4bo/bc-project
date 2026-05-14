@@ -25,7 +25,7 @@ def get_save_filename(args: tuple[str], fallback_template: str, thread_id: str):
             filename += ".json"
     else:
         thread_prefix = thread_id[:THREAD_PREFIX_LENGTH]
-        filename = fallback_template.replace("{id}", id=thread_prefix)
+        filename = fallback_template.replace("{id}", thread_prefix)
 
     return filename
 
