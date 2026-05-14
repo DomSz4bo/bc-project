@@ -27,12 +27,14 @@ from rich.panel import Panel
 from rich.text import Text
 
 from cli.commands import (
-    handle_exit,
-    handle_list_skills,
-    handle_load_state,
-    handle_reload_skills,
-    handle_save,
-    handle_save_full,
+    CommandBase,
+    Exit,
+    Help,
+    ListSkills,
+    LoadState,
+    ReloadSkills,
+    SaveHistory,
+    SaveState,
 )
 from src.graph.node_names import Nodes
 from src.graph.state import GraphContext
@@ -98,13 +100,14 @@ class InteractiveCLI:
 
     def _setup_commands(self):
         """Maps CLI commands to their handler functions."""
-        self.commands_map = {
-            "/exit": handle_exit,
-            "/save": handle_save,
-            "/save-full": handle_save_full,
-            "/load": handle_load_state,
-            "/skills-list": handle_list_skills,
-            "/skills-reload": handle_reload_skills,
+        self.commands_map: dict[str, CommandBase] = {
+            "/exit": Exit("/exit"),
+            "/save": SaveState("/save"),
+            "/save-history": SaveHistory("/save-history"),
+            "/load": LoadState("/load"),
+            "/skills-list": ListSkills("/skills-list"),
+            "/skills-reload": ReloadSkills(".skills-reload"),
+            "/help": Help("/help"),
         }
 
     def _setup_ui(self):
@@ -179,7 +182,7 @@ class InteractiveCLI:
         command, *args = user_input.split()
         action = self.commands_map.get(command)
         if action:
-            return await action(self, *args)
+            return await action.handle(self, *args)
 
         self.console.print(f"[red]Unknown command:[/red] {user_input}")
         return False
