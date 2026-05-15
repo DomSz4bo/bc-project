@@ -2,7 +2,7 @@ import os
 import traceback
 import uuid
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import chainlit as cl
 from langchain_core.messages import HumanMessage, ToolMessage
@@ -222,8 +222,8 @@ class WorkflowApp:
         return "\n\n".join(content_lines) if content_lines else None
 
     async def handle_message(self, message: cl.Message):
-        graph_config = cast(RunnableConfig, cl.user_session.get("graph_config"))
-        graph_context = cast(GraphContext, cl.user_session.get("graph_context"))
+        graph_config: RunnableConfig = cl.user_session.get("graph_config")
+        graph_context: GraphContext = cl.user_session.get("graph_context")
 
         input_state = {"messages": [HumanMessage(content=message.content)]}
 
