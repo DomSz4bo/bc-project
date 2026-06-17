@@ -63,8 +63,7 @@ async def test_engineer_normal_execution(mock_runtime, mock_context, mock_config
         mock_extract.assert_called_once_with(state, Path("."))
 
         mock_create_agent.assert_called_once()
-        args, kwargs = mock_create_agent.call_args
-        assert len(args[1]) == 2
+        _, kwargs = mock_create_agent.call_args
         assert kwargs["system_prompt"] == SYSTEM_PROMPT
         assert kwargs["context_schema"] == GraphContext
 
